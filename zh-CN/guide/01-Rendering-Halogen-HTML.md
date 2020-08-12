@@ -38,9 +38,9 @@ Halogn 中的元素可接受两个参数：
 
 1. Halogen HTML 代码和普通的 HTML 有相同的结构：一个 `div` 节点，包含了一个 `input` 和一个 `button`，而这个 button 又包含了一个纯文本。
 2. 属性也不再是定义在 tag 上的键值对，而是一个相同属性的数组。
-3. 子元素 Child elements move from being inside an open and closing tag into an array of children, if the element supports children.
+3. 子元素也不再是定义在闭合标签内，而是和属性一样，是一个数组。
 
-Functions for writing properties in your HTML come from the `Halogen.HTML.Properties` module.
+定义 HTML 元素相关属性的相关函数来自于模块`Halogen.HTML.Properties`。
 
 ```purs
 import Halogen.HTML as HH
@@ -59,31 +59,31 @@ html =
     ]
 ```
 
-You can see Halogen's emphasis on type safety displayed here.
+在这里，我们可以注意到 Halogen 如何强调类型安全
 
-1. A text input can't have children, so Halogen doesn't allow the element to take further elements as an argument.
-2. Only some values are possible for a button's `type` property, so Halogen restricts them with a sum type.
-3. CSS classes use a `ClassName` newtype so that they can be treated specially when needed; for example, the `classes` function ensures that your classes are space-separated when they're combined.
+1. input 元素不能有自元素，所以 Halogen 在定义函数时，不允许 HH.input 接受子节点数组作为参数。
+2. button 的`type`只能是特定的几个值，所以 Halogen 定义了一个 Sum 类型的值来限制取值范围。
+3. CSS 中的 class 使用了一个特殊的 newtype `ClassName` 来定义，可以做一些特殊的操作，例如 `classes` 函数会保证定义在合并定义的 class 之后，class 名称之间都是空格隔开的格式。
 
-Some HTML elements and properties clash with reserved keywords in PureScript or with common functions from the Prelude, so Halogen adds an underscore to them. That's why you see `type_` instead of `type` in the example above. (You also see `id_` instead of `id`, but in PureScript 0.12 the `id` function was renamed to `identity`; future versions of Halogen will just use `id` without an underscore.)
+有些 HTML 元素或者属性的名字和 PureScript 中的关键字或者函数是冲突的，所以 Halogen 会在这些名称之前添加一个下划线*。这就是为什么上面的例子里我们使用了 `type*`而不是`type`。（你可能会注意到我们用了`id\_`而不是`id`，但是在PureScript 0.12之后，`id`函数被重命名为`identity`，之后版本的Halogen会直接使用`id`）
 
-When you don't need to set any properties on a Halogen HTML element, you can use its underscored version instead. For example, the `div` and `button` elements below have no properties:
+如果你不需要制定任何属性，可以直接使用带有下划线前缀的函数，例如下面的例子中， `div` 和 `button` 元素都没有任何属性。
 
 ```purs
 html = HH.div [ ] [ HH.button [ ] [ HH.text "Click me!"] ]
 ```
 
-That means we can rewrite them using their underscored versions. This can help keep your HTML tidy.
+所以我们可以重写为如下版本，可以是代码看起来更简短，整洁：
 
 ```purs
 html = HH.div_ [ HH.button_ [ HH.text "Click me!" ] ]
 ```
 
-## Writing Functions in Halogen HTML
+## 在 Halogen HTML 中编写函数
 
-It's common to write helper functions for Halogen HTML. Since Halogen HTML is built from ordinary PureScript functions, you can freely intersperse other functions in your code.
+通常，我们需要写一些辅助函数，因为 Halogen HTML 是基于普通的 PureScript 函数构建的，所以你可以在其中使用自由的使用其他函数。
 
-In this example, our function accepts an integer and renders it as text:
+如下例，我们编写了一个函数，接受一个整数，将其渲染为一个文本节点。
 
 ```purs
 header :: forall w i. Int -> HH.HTML w i
@@ -92,7 +92,7 @@ header visits =
     [ HH.text $ "You've had " <> show visits <> " visitors" ]
 ```
 
-We can also render lists of things:
+我们还可以渲染一个字符串列表：
 
 ```purs
 lakes = [ "Lake Norman", "Lake Wylie" ]
@@ -102,11 +102,11 @@ html = HH.div_ (map HH.text lakes)
 -- same as: HH.div_ [ HH.text "Lake Norman", HH.text "Lake Wylie" ]
 ```
 
-These function introduced a new type, `HH.HTML`, which you haven't seen before. Don't worry! This is the type of Halogen HTML, and we'll learn about it in the next section. For now, let's continue learning about using functions in HTML.
+上面的函数使用了一个新的类型 `HH.HTML`，这个我们还没有遇到过，但是不用担心，在下一节中，我们会介绍这个类型，我们还是继续学习在 HTML 中使用函数。
 
-One common requirement is to conditionally render some HTML. You can do this with ordinary `if` and `case` statements, but it's useful to write helper functions for common patterns. Let's walk through two helper functions you might write in your own applications, which will help us get more practice writing functions with Halogen HTML.
+根据条件选择性的渲染 HTML 是一个非常常见的需求。我们可以直接使用普通的 `if` 和 `case` 语句，但是为一些常见的模式编写辅助函数是非常有用的。让我们看一下两个辅助函数，你很有可能在编写的应用的时候需要用到这两个函数，这能进一步帮助我们了解如何在 Halogen HTMLl 中编写函数。
 
-First, you may sometimes need to deal with elements that may or may not exist. A function like the one below lets you render a value if it exists, and render an empty node otherwise.
+首先，你很有可能需要处理某种元素有可能不存在的情况。如下所示的函数会在值存在时渲染对应的元素，如果不存在，则会渲染一个空元素。
 
 ```purs
 maybeElem :: forall w i a. Maybe a -> (a -> HH.HTML w i) -> HH.HTML w i
@@ -120,7 +120,7 @@ renderName :: forall w i. Maybe String -> HH.HTML w i
 renderName mbName = maybeElem mbName \name -> HH.text name
 ```
 
-Second, you may want to render some HTML only if a condition is true, without computing the HTML if it fails the condition. You can do this by hiding its evaluation behind a function so the HTML is only computed when the condition is true.
+另外，有可能你想要在某个条件为 true 时渲染 HTML，如果条件为 false，则不做任何计算和渲染。这种情况，你可以单独编写一个函数，这样，只有当条件为 true 是才会执行函数，做相应的计算。
 
 ```purs
 whenElem :: forall w i. Boolean -> (Unit -> HH.HTML w i) -> HH.HTML w i
@@ -133,19 +133,19 @@ renderOld { old, new } =
     HH.div_ [ HH.text $ show old ]
 ```
 
-Now that we've explored a few ways to work with HTML, let's learn more about the types that describe it.
+至此，我们已经学习了操作 HTMLL 的几种方式，下面让我们来学习一下相关的类型。
 
-## HTML Types
+## HTML 类型
 
-So far we've written HTML without type signatures. But when you write Halogen HTML in your application you'll include the type signatures.
+到现在为止，我们在写 HTML 时都没有指定类型，但是在实际编写 Halogen 应用的时候，是需要包含对应的类型声明的。
 
 ### `HTML w i`
 
-`HTML` is the core type for HTML in Halogen. It is used for HTML elements that are not tied to a particular kind of component. For example, it's used as the type for the `h1`, `text`, and `button` elements we've seen so far. You can also use this type when defining your own custom HTML elements.
+`HTML` 是 Halogen 中核心类型，是用来编写通用的 HTML 元素，和具体的组件无关。例如，我们在之前看到的 `h1`、`text`和`button`元素都是使用的这个类型。我们也可以用这个类型自定义 HTML 元素。
 
-The `HTML` type takes two type parameters: `w`, which stands for "widget" and describes what components can be used in the HTML, and `i`, which stands for "input" and represents the type used to handle DOM events.
+`HTML` 类型接受两个类型参数：`w`，代表“控件”(widget)，描述了相关的组件类型，另外一个类型参数`i`，代表“输入”(input),表示处理 DOM 事件的类型。
 
-When you write helper functions for Halogen HTML that don't need to respond to DOM events, then you will typically use the `HTML` type without specifying what `w` and `i` are. For example, this helper function lets you create a button, given a label:
+当你编写 Halogen HTML 的辅助函数，但是不需要响应 DOM 事件，你可以在使用 `HTML` 类型时不声明具体的`w` 和 `i` 类型。例如，下面这个根据一个文本标签创建一个 button 的辅助函数：
 
 ```purs
 primaryButton :: forall w i. String -> HH.HTML w i
@@ -155,7 +155,7 @@ primaryButton label =
     [ HH.text label ]
 ```
 
-You could also accept HTML as the label instead of accepting just a string:
+除了接受字符串之外，你也可以接受其它的 HTML 作为标签：
 
 ```purs
 primaryButton :: forall w i. HH.HTML w i -> HH.HTML w i
@@ -165,30 +165,30 @@ primaryButton label =
     [ label ]
 ```
 
-Of course, being a button, you probably want to do something when it's clicked. Don't worry -- we'll cover handling DOM events in the next chapter!
+当然，对于一个 button，通常在按钮被点击后，我们需要执行某些操作。这些我们会在下一章中介绍。
 
-### `ComponentHTML` and `PlainHTML`
+### `ComponentHTML` 和 `PlainHTML`
 
-There are two other HTML types you will commonly see in Halogen applications.
+在 Halogen 应用中常见的有两种 HTML 相关的类型。
 
-`ComponentHTML` is used when you write HTML that is meant to work with a particular type of component. It can also be used outside of components, but it is most commonly used within them. We'll learn more about this type in the next chapter.
+`ComponentHTML` 用来编写针对特定类型组件的 HTML，但是这个类型也可以非组件代码中使用，但是并不常见，在下一章中我们会详细介绍这个类型。
 
-`PlainHTML` is a more restrictive version of `HTML` that's used for HTML that doesn't contain components and doesn't respond to events in the DOM. The type lets you hide `HTML`'s two type parameters, which is convenient when you're passing HTML around as a value. However, if you want to combine values of this type with other HTML that does respond to DOM events or contain components, you'll need to convert it with `fromPlainHTML`.
+`PlainHTML` 是一个有特殊限制的`HTML`类型，通常用于编写不包含任何组件而且不响应任何 DOM 事件的 HTML 元素。使用这个类型，不需要指定 `HTML` 的两个类型参数，这个需要按值传递 HTML 时特别方便。但是，如果和其他包含组件的 HTML 在一块儿组合使用时，需要使用函数 `fromPlainHTML` 进行转换。
 
 ### `IProp`
 
-When you look up functions from the `Halogen.HTML.Properties` and `Halogen.HTML.Events` modules, you'll see the `IProp` type featured prominently. For example, here's the `placeholder` function which will let you set the string placeholder property on a text field:
+如果查看 `Halogen.HTML.Properties` 和 `Halogen.HTML.Events` 模块中的函数，你会看到大量使用了 `IProp` 类型。例如，函数 `placeholder` 用来设置 text 输入框的占位符内容：
 
 ```purs
 placeholder :: forall r i. String -> IProp (placeholder :: String | r) i
 placeholder = prop (PropName "placeholder")
 ```
 
-The `IProp` type is used for events and properties. It uses a row type to uniquely identify particular events and properties; when you then use one of these properties with a Halogen HTML element, Halogen is able to verify whether the element you're applying the property to actually supports it.
+`IProp` 用来指定事件和属性，使用一个行类型（row type）来唯一的指定特定的事件和属性。这样做，当你在 Halogen HTML element 元素指定属性或者事件时，Halogen 能够判断此元素是否支持这个属性或者事件。
 
-This is possible because Halogen HTML elements also carry a row type which lists all the properties and events that it can support. When you apply a property or event to the element, Halogen looks up in the HTML element's row type whether or not it supports the property or event.
+这是因为 Halogen HTML 元素同样有一个行类型列出了支持的属性和事件。当你为元素赋值属性或者事件时，Halogen 会查找当前元素对应的行类型，看是否支持这个属性或者事件。
 
-This helps ensure your HTML is well-formed. For example, `<div>` elements do not support the `placeholder` property according to the DOM spec. Accordingly, if you try to give a `div` a `placeholder` property in Halogen you'll get a compile-time error:
+这有助于保证 HTML 的合理。例如，按照 DOM 标准， `<div>` 元素不支持 `placeholder` 属性。当你试图为 `div` 赋值 `placeholder` 属性时，会触发编译期错误：
 
 ```purs
 -- ERROR: Could not match type ( placeholder :: String | r )
@@ -196,4 +196,4 @@ This helps ensure your HTML is well-formed. For example, `<div>` elements do not
 html = HH.div [ HP.placeholder "blah" ] [ ]
 ```
 
-This error tells you that you've tried to use a property with an element that doesn't support it. It first lists the property you tried to use, and then it lists the properties that the element _does_ support. Another example of Halogen's type safety in action!
+这个错误提示你试图使用一个此元素不支持的属性。错误信息会首先列出你想要使用的属性，然后列出了当前元素 _实际_ 支持的属性。这也算是 Halogen 类型安全的例证。
