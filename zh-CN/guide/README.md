@@ -1,8 +1,8 @@
-# Halogen Guide
+# Halogen 指南
 
-Halogen is a declarative, component-based UI library for PureScript that emphasizes type safety. In this guide you will learn the core ideas and patterns needed to write real-world applications in Halogen.
+Halogen 是一个声明式的基于组件的 PureScript UI 库，强调类型安全。在本指南中，你会学习到 Halogen 的核心概念以及编写实际应用时需要用到的常见模式。
 
-Here is a tiny Halogen app that lets you increment and decrement a counter:
+下面是个小例子，支持增加或者减少的计数器：
 
 ```purs
 module Main where
@@ -45,30 +45,29 @@ component =
     Decrement -> H.modify_ \state -> state - 1
 ```
 
-You can paste this example (and any other full examples in this guide) into [Try PureScript](https://try.purescript.org). We highly recommend doing this to explore the examples interactively! For example, try changing the buttons so they use the words `"Increment"` and `"Decrement"` instead of the symbols `"+"` and `"-"`.
+你可以把这个例子（或者本指南中的其他例子）复制到 [Try PureScript](https://try.purescript.org)。强烈建议你这样做，可以交互式的分析这个例子。例如，你可以修改按钮的文案为 `"Increment"` 和 `"Decrement"`，而不是使用符号 `"+"` 和 `"-"`。
 
-> By default, Try PureScript will compile every time you make a change. You can also disable the auto-compile feature, which will cause Try PureScript to wait for you to click the "Compile" button to compile your Halogen application.
+> 默认情况下，Try PureScript 会在你修改了代码后自动重新编译。你可以禁用这个特性，然后通过点击"Compile"按钮来手动触发编译。
 
-Don't worry if this code is overwhelming at first -- when you've read the next few chapters of the guide you'll gain a solid understanding of how this component works and how to write your own.
+现在不用担心不理解这段代码，在你阅读完本指南之后，你会理解这个组件是如何工作以及如何编写自己的组件。
 
-## How to Read This Guide
+## 如何阅读本指南
 
-In this guide we'll explore the building blocks of Halogen apps: elements and components. When you understand these you can create complex apps from small, reusable pieces.
+在本指南中，我们会学习 Halogen 应用的基本组成部分：元素和组件。当你理解了这些之后，你就可以用可重用的小组件构建复杂应用了。
 
-This is a step-by-step introduction to Halogen's main concepts. Each chapter builds on knowledge introduced in previous chapters, so we recommend reading through the guide in order.
+这是一个逐步递进的介绍 Halogen 关键概念的指南。每一章都是建立在前一章内容的基础上，我们建议你按照顺序阅读每一章的内容。
 
-Halogen is a PureScript library, and it assumes basic knowledge of PureScript concepts like functions, records, arrays, `do` notation, `Effect`, and `Aff`. It will also help if you understand the basics of HTML and the DOM. If you need a refresher, we recommend:
+Halogen 是一个 PureScript 库，需要读者了解 PureScript 中的基本概念，例如函数、结构体、数组、 `do` 表达式、 `Effect`和`Aff`。了解 HTML 和 DOM 也会对理解相关概念有所帮助。如果你需要回顾一下，我们推荐阅读：
 
-* For PureScript: the [PureScript Book](https://book.purescript.org) and Jordan Martinez's [PureScript Reference](https://github.com/JordanMartinez/purescript-jordans-reference).
-* For HTML: the MDN introductions to [HTML](https://developer.mozilla.org/en-US/docs/Learn/HTML/Introduction_to_HTML) and [DOM events](https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Building_blocks/Events).
+- 关于 PureScript：[PureScript Book](https://book.purescript.org) 和 Jordan Martinez 的 [PureScript Reference](https://github.com/JordanMartinez/purescript-jordans-reference).
+- 关于 HTML: MDN 的[HTML 介绍](https://developer.mozilla.org/en-US/docs/Learn/HTML/Introduction_to_HTML) 和 [DOM 事件](https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Building_blocks/Events).
 
-## Table of Contents
+## 目录
 
-1. [Rendering Halogen HTML](./01-Rendering-Halogen-HTML.md)
-2. [Introducing Components](./02-Introducing-Components.md)
-3. [Performing Effects](./03-Performing-Effects.md)
-4. [Lifecycles & Subscriptions](./04-Lifecycles-Subscriptions.md)
-5. [Parent & Child Components](./05-Parent-Child-Components.md)
-6. [Running An Application](./06-Running-Application.md)
-7. [Next Steps](./07-Next-Steps.md)
-
+1. [渲染 Halogen HTML](./01-Rendering-Halogen-HTML.md)
+2. [组件简介](./02-Introducing-Components.md)
+3. [执行作用](./03-Performing-Effects.md)
+4. [生命周期和订阅](./04-Lifecycles-Subscriptions.md)
+5. [父子组件](./05-Parent-Child-Components.md)
+6. [运行应用](./06-Running-Application.md)
+7. [下一步](./07-Next-Steps.md)
