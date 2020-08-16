@@ -1,10 +1,10 @@
-# Running an Application
+# 运行应用
 
-Over the course of this guide we've seen the standard way to run a Halogen application several times. In this chapter, we'll learn what is actually going on when we run a Halogen application and how to control a running app from the outside.
+在这份指南中，已经出现了很多次运行 Halogen 应用的标准方式。在本章中，我们会学习当我们运行 Halogen 应用时到底发生了什么以及如何从外部控制应用。
 
-## Using `runUI` and `awaitBody`
+## 使用 `runUI` 和 `awaitBody`
 
-PureScript applications use the `main` function in their `Main` module as their entrypoint. Here's a standard `main` function for Halogen apps:
+PureScript 应用使用`Main`中的`main`函数作为程序入口。下面是 Halogen 应用的标准`main`函数。
 
 ```purs
 module Main where
@@ -25,7 +25,7 @@ component :: forall query input output m. H.Component query input output m
 component = ...
 ```
 
-The most important function used in `main` is the `runUI` function. Provide `runUI` with your root component, the root component's input value, and a reference to a DOM element, and it will provide your application to the Halogen virtual DOM. The virtual DOM will then render your application at that element and maintain it there for as long as your app is running.
+`main`函数中最重要的就是 `runUI` 这个函数。Provide `runUI` with your root component, the root component's input value, and a reference to a DOM element, and it will provide your application to the Halogen virtual DOM. The virtual DOM will then render your application at that element and maintain it there for as long as your app is running.
 
 ```purs
 runUI
@@ -88,7 +88,7 @@ main :: Effect Unit
 main = HA.runHalogenAff do
   body <- HA.awaitBody
   io <- runUI component unit body
-  
+
   -- Log a message from outside the application by sending it to the button
   let logMessage str = void $ io.query $ H.tell $ AppendMessage str
 
@@ -139,23 +139,23 @@ component =
           [ HE.onClick \_ -> Just Toggle ]
           [ HH.text $ if state.enabled then "On" else "Off" ]
       ]
-  
+
   handleAction :: Action -> H.HalogenM State Action () Output m Unit
   handleAction = case _ of
     Toggle -> do
       newState <- H.modify \st -> st { enabled = not st.enabled }
       H.raise (Toggled newState.enabled)
-  
+
   handleQuery :: forall a. Query a -> H.HalogenM State Action () Output m (Maybe a)
   handleQuery = case _ of
     IsOn reply -> do
       enabled <- H.gets _.enabled
       pure (Just (reply enabled))
-      
+
     SetEnabled enabled a -> do
       H.modify_ _ { enabled = enabled }
       pure (Just a)
-    
+
     AppendMessage str a -> do
       H.modify_ \st -> st { messages = Array.snoc st.messages str }
       pure (Just a)

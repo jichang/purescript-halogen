@@ -1,20 +1,20 @@
-# Introducing Components
+# 组件介绍
 
-Halogen HTML is one basic building block of Halogen applications. But pure functions that produce HTML lack many essential features that a real world application needs: state that represents values over time, effects for things like network requests, and the ability to respond to DOM events (for example, when a user clicks a button).
+Halogen HTML 是 Halogen 应用的基本构成部分。但是只有生成 HTML 的纯函数是不够的，实际应用中还需要其他功能：程序运行时的状态、执行网络请求等副作用以及响应 DOM 事件（例如，用户点击按钮）。
 
-Halogen components accept input and produce Halogen HTML, like the functions we've seen so far. Unlike functions, though, components maintain internal state, can update their state or perform effects in response to events, and can communicate with other components.
+Halogen 组件根据输入生成 HTML，这点和我们之前看到的函数一样。但是和普通函数不同的是，组件可以包含内部状态，也可以在响应事件时更新状态或者执行外部调用，此外，还可以和其它组件进行痛惜。
 
-Halogen uses a component architecture. That means that Halogen uses components to let you split your UI into independent, reusable pieces and think about each piece in isolation. You can then combine components together to produce sophisticated applications.
+Halogen 使用基于组件的架构，你可以把 UI 拆分成独立可重用的组件，每个组件都相对独立。然后可以通过组合不同的组件来构建完整的复杂应用。
 
-For example, every Halogen application is made up of at least one component, which is called the "root" component. Halogen components can contain further components, and the resulting tree of components comprises your Halogen application.
+例如，每个 Halogen 应用都至少由一个组件构成，通常成为根（root）组件。每个 Halogen 组件还可以包含其他组件，最后生成的组件树构成了完整的 Halogen 应用。
 
-In this chapter we'll learn most of the essential types and functions for writing Halogen components. For a beginner, this is the hardest chapter in the guide because many of these concepts will be brand-new. Don't worry if it feels overwhelming the first time you read it! You'll use these types and functions over and over again when you write Halogen applications, and they soon become second nature. If you're having a hard time with the chapter, try reading it again while building a simple component other than the one described here.
+在这一章，我们会学习编写 Halogen 组件时要用到的类型和函数。对于初学者来说，这是本系列指南里最难的部分，因为多数概念对于初学者都是非常陌生的。首次阅读时如果感到太复杂也不要焦虑，在写 Halogen 应用过程中，你会不断的用到这些类型以及函数，很快你就会熟悉这些概念。如果阅读本章过程中感到吃力，要试着反复阅读并且自己构建一些不同的组件来加深理解。
 
-In this chapter we'll also see more examples of Halogen's declarative style of programming. When you write a component you're responsible for describing what UI should exist for any given internal state. Halogen, under the hood, updates the actual DOM elements to match your desired UI.
+在本章中，我们会看到更多 Halogen 声明式编程的例子。当编写组件，我们需要做的是描述状态和 UI 是如何对应的，Halogen 会根据你想要的 UI 去更新 DOM 元素。
 
-## A Tiny Example
+## 小例子
 
-We have already seen a simple example of a component: a counter that can be incremented or decremented.
+我们之前看到了一个组件的例子：一个可以增加或者减少的计数器。
 
 ```purs
 module Main where
@@ -52,120 +52,120 @@ component =
       H.modify_ \state -> state + 1
 ```
 
-This component mantains an integer as its internal state, and updates that state in response to click events on the two buttons.
+这个组件使用一个整数作为内部状态，当点击按钮时回去更新这个状态。
 
-This component works, but in a real world application we wouldn't leave all the types unspecified. Let's rebuild this component from scratch with all the types it uses.
+这个组件功能没有问题，但是在实际工作中，我们一般不会忽略掉所有的类型声明。接下来，我们重新构建这个组件，但是这次要带上所有的类型。
 
-## Building a Basic Component (With Types)
+## 构建一个简单组件（有类型）
 
-A typical Halogen component accepts input, maintains an internal state, produces Halogen HTML from that state, and updates its state or performs effects in response to events. In this case we don't need to perform any effects, but we'll cover them soon.
+一个典型的 Halogen 组件包含接受输入，维护一个内部状态，根据内部状态生成 HTML，同时在响应事件时，会更新状态或者执行其他外部作用等功能。在这个例子中，我们不会执行外部作用，相关内容后边章节会介绍。
 
-Let's break down each part of our component, assigning types along the way.
+接下来，我们拆分每一个部分，然后同时介绍一下相关的类型。
 
-### Input
+### 输入
 
-Halogen components can accept input from a parent component or the root of the application. If you think of a component as a function, then input is the function's argument.
+Halogen 组件可以接受来自父组件或者根组件的输入。如果你把组件当作一个函数，那么这里的输入就是指这个函数的参数。
 
-If your component takes input, then you should describe it with a type. For example, a component that accepts an integer as input would use this type:
+如果你的组件需要输入，你需要为其指定一个类型。例如，一个接受整数作为输入的组件，可以使用类型：
 
 ```purs
 type Input = Int
 ```
 
-Our counter doesn't require any input, so we have two choices. First, we can just say that our input type is `Unit`, meaning that we'll just take a dummy value and throw it away:
+我们的计数器不需要任何输入，我们有两个选择。一是我们声明输入类型为 `Unit`，意味着我们需要一个虚假的指，并且最终会丢弃这个值：
 
 ```purs
 type Input = Unit
 ```
 
-Second, and more commonly, anywhere our input type shows up in our component we can simply leave it as a type variable: `forall i. ...`. It's perfectly fine to use either approach, but from here on out we'll use type variables to represent types our component isn't using.
+第二个选择更加常见，每当我们需要使用这个输入类型时，我们可以用一个类型参数：`forall i. ...`。 两种方式都是没问题的，当时我们在接下来的代码里都会使用第二种类型参数的方式。
 
-### State
+### 状态
 
-Halogen components maintain an internal state over time, which is used to drive the component's behavior and to produce HTML. Our counter component maintains the current count, an integer, so we'll use that as our state type:
+Halogen 组件会维护一个内部的状态，组件会使用这个状态来控制组件行为，生成 HTML。我们的计数器组件维护了一个整数值作为内部状态，所以我们可以用那个整数类型来作为状态的类型：
 
 ```purs
 type State = Int
 ```
 
-Our component needs to also produce an initial state value. All Halogen components require an `initialState` function which produces the initial state from the input value:
+组件还需要负责生成初始状态。所有 Halogen 组件都需要实现 `initialState` 函数，这个函数负责根据输入来生成初始状态：
 
 ```purs
 initialState :: Input -> State
 ```
 
-Our counter component doesn't use its input, so our `initialState` function won't use an input type and will instead just leave that type variable open. Our counter should start at 0 when the component runs.
+我们的计数器组件不需要任何输入，所以 `initialState` 函数可以使用类型参数，不需要声明具体的输入类型。运行计数器组件时，初始状态应该设置为 0:
 
 ```purs
 initialState :: forall input. input -> State
 initialState _ = 0
 ```
 
-### Actions
+### 行为
 
-Halogen components can update state, perform effects, and communicate with other components in response to events that arise internally. Components use an "action" type to describe what kinds of things a component can do in response to internal events.
+Halogen 组件在响应内部事件时，可以更新状态，执行外部作用或者和其他组件通信。组件可以用一个类型来描述当处理内部事件时可以执行的不同操作。
 
-Our counter has two internal events: 
+我们的计数器组件有两种内部事件：
 
-1. a click event on the "-" button to decrement the count
-2. a click event on the "+" button to increment the count. 
+1. 点击"-"按钮，减少计数值
+2. 点击"+"按钮，增加计数值
 
-We can describe what our component should do in response to these events using a data type we'll call `Action`:
+我们可以定义一个 `Action` 类型来描述组件可以处理的内部事件：
 
 ```purs
 data Action = Increment | Decrement
 ```
 
-This type signifies that our component is capable of incrementing and decrementing. In a moment, we'll see this type used in our HTML -- another example of Halogen's declarative nature.
+这个类型描述了计数器组件可以处理增加或者减少两种事件。稍后，我们将看到如何在 HTML 中使用这个类型。
 
-Just like how our state type had to be paired with an `initialState` function that describes how to produce a `State` value, our `Action` type should be paired with a function called `handleAction` that describes what to do when one of these actions occurs.
+和 State 类型需要定义一个 `initialState` 生成初始状态一样，`Action` 类型也需要定义一个函数 `handleAction` 来描述如何处理这些事件。
 
 ```purs
 handleAction :: forall output m. Action -> H.HalogenM State Action () output m Unit
 ```
 
-As with our input type, we can leave type variables open for types that we aren't using. 
+和输入类型一样，对于那些我们不需要使用的参数，可以使用类型参数来描述。
 
-* The type `()` means our component has no child components. We could also leave it open as a type variable because we aren't using it -- `slots`, by convention -- but `()` is so short you'll see this type commonly used instead.
-* The `output` type parameter is only used when your component communicates with a parent.
-* The `m` type parameter is only relevant when your component performs effects.
+- `()` 类型意味着我们的组件没有自组件。我们也可以使用类型参数，而不是`()`，但是因为这个类型非常简短，我们会经常使用这个类型。
+- `output` 类型参数是描述和父组件通信时需要用到的。
+- `m` 类型只有在组件需要执行外部作用时才会用到。
 
-Since our counter has no child components we'll use `()` to describe them, and because it doesn't communicate with a parent or perform effects we'll leave the `output` and `m` type variables open.
+我们的计数器组件不需要子节点，不需要和父节点通信，而且也不需要执行外部作用，所以我们会使用类型参数 `output` 和 `m`。
 
-Here's the `handleAction` function for our counter:
+下面是计数器组件的 `handleAction` 函数：
 
 ```purs
 handleAction :: forall output m. Action -> H.HalogenM State Action () output m Unit
 handleAction = case _ of
-  Decrement -> 
+  Decrement ->
     H.modify_ \state -> state - 1
 
   Increment ->
     H.modify_ \state -> state + 1
 ```
 
-Our `handleAction` function responds to `Decrement` by reducing our state variable by 1, and to `Increment` by increasing our state variable by 1. Halogen provides several update functions you can use in your `handleAction` function; these ones are commonly used:
+`handleAction` 函数在响应 `Decrement` 时，会对内部状态做减 1 操作，响应 `Increment` 是会做加 1 操作。Halogen 提供了很多可以在`handleAction` 函数中使用的更新状态的函数，以下几个是最常用的：
 
-* `modify` allows you to update the state, given the previous state, returning the new state
-* `modify_` is the same as `modify`, but it doesn't return the new state (thus you don't have to explicitly discard the result, as you would with `modify`)
-* `get` allows you to retrieve the current state
-* `gets` allows you to retrieve the current state and also apply a function to it (most commonly, `_.fieldName` to retrieve a particular field from a record)
+- `modify` 用来更新状态，提供当前的状态，返回最新的状态
+- `modify_` 和 `modify`相同，区别是不需要返回最新状态。（所以不需要像`modify`那样丢弃结果）
+- `get` 用来获取状态
+- `gets` 用来获取状态然后用状态作为参数调用一个函数（通常使用 `_.fieldName` 去获取结构体中的某个字段）
 
-We'll talk more about `HalogenM` when we talk about performing effects. Our counter doesn't perform effects, so all we need are the state update functions.
+我们会在之后讲解执行外部作用是介绍 `HalogenM` 。计数器组件不需要执行外部作用，我们需要的只是状态更新函数。
 
-### Rendering
+### 渲染
 
-Halogen components produce HTML from their state using a function called `render`. The render function runs every time the state changes. This is what makes Halogen declarative: for any given state, you describe the UI that it corresponds to. Halogen handles the workload of ensuring that state changes always result in the UI you described.
+Halogen 组件使用 `render` 函数来根据内部状态生成 HTML。`render` 函数会在每次内部状态发生改变时执行。这就是为什么 Halogen 是声明式的：我们只需要指定内部状态对应的 UI，Halogen 会负责处理更新，生成你需要的 UI。
 
-Render functions in Halogen are pure, which means that you can't do things like get the current time, make network requests, or anything like that during rendering. All you can do is produce HTML for your state value.
+渲染过程在 Halogen 是纯函数，意味着你不能获取当前事件、执行网络请求或者类似的操作，你能做的就是根据内部状态生成对应的 HTML。
 
-When we look at the type of our render function we can see the `ComponentHTML` type we touched on last chapter. This type is a more specialized version of the `HTML` type, meant specifically for HTML produced in components. Once again, we'll use `()`  and leave `m` open because they are only relevant when using child components, which we'll cover in a later chapter.
+我们看一下渲染函数的类型，里面有上一张介绍过的 `ComponentHTML`。这个类型是一个更加特定版本的 `HTML` 类型，是针对组件生成的 HTML。我们这里还是会使用 `()` 和 `m`，这些是涉及到自组件的时候才会用到，我们之后的章节会做介绍。
 
 ```purs
 render :: forall m. State -> H.ComponentHTML Action () m
 ```
 
-Now that we're working with our render function, we're back to the Halogen HTML that should be familiar from the last chapter! You can write regular HTML in `ComponentHTML` just like we did last chapter:
+现在看一下渲染函数，这和上一章介绍的 Halogen HTML 内容一样，和上一章一样，对于类型 `ComponentHTML` ，我们可以编写正常的 HTML。
 
 ```purs
 import Halogen.HTML.Events
@@ -179,32 +179,32 @@ render state =
     ]
 ```
 
-#### Handling Events
+#### 处理事件
 
-We can now see how to handle events in Halogen. First, you write the event handler in the properties array along with any other properties, attributes, and refs you might need. Then, you associate the event handler with an `Action` that your component knows how to handle. Finally, when the event occurs, your `handleAction` function is called to handle the event.
+接下来我们看一下 Halogen 中如何处理事件。首先，我们需要声明事件处理函数，事件处理函数和其他属性一样，都是写在属性数组参数中。在事件处理函数中，我们要返回一个当前组件能够处理的 `Action` 类型值。当事件发生时，会调用 `handleAction` 函数来处理。
 
-You might be curious about why we provided an anonymous function to `onClick`. To see why, we can look at the actual type of `onClick`:
+你可能会好奇我们在声明 `onClick` 时为什么会使用匿名函数。为了搞明白为什么，让我们看一下它的类型：
 
 ```purs
-onClick 
+onClick
   :: forall row action
    . (MouseEvent -> Maybe action)
   -> IProp (onClick :: MouseEvent | row) action
 
 -- Specialized to our component
-onClick 
+onClick
   :: forall row
-   . (MouseEvent -> Maybe Action) 
+   . (MouseEvent -> Maybe Action)
   -> IProp (onClick :: MouseEvent | row) Action
 ```
 
-In Halogen, event handlers take as their first argument a callback. This callback receives the DOM event that occurred (in the case of a click event, that's a `MouseEvent`), which contains some metadata you may want to use, and is then responsible for returning an action that Halogen should run in response to the event. In our case, we won't inspect the event itself, so we throw the argument away and return the action we want to run (`Increment` or `Decrement`).
+Halogen 中，事件处理函数的第一个参数是一个回掉函数。回掉函数的参数是当前发生的 DOM 事件（在这个例子里，是一个鼠标点击事件 `MouseEvent` ），这个事件里包含了你可能会使用的信息，回掉函数需要返回一个 Halogen 需要运行的行为（action）。在我们的例子里，我们不需要检查这个具体的事件，所以我们丢弃这个值，返回一个我们想要运行的行为（`Increment` 或者 `Decrement`）。
 
-The `onClick` function then returns a value of type `IProp`. You should remember `IProp` from the previous chapter. As a refresher, Halogen HTML elements specify a list of what properties and events they support. Properties and events in turn specify their type. Halogen is then able to ensure that you never use a property or event on an element that doesn't support it. In this case buttons do support `onClick` events, so we're good to go!
+`onClick` 函数的返回值类型是 `IProp`。在前面的章节我们提到过 `IProp` ，Halogen HTML 元素会定义自身支持的属性和事件。设置的属性或者事件也都会声明自己的类型，Halogen 通过类型检测确保你没有设置此元素不支持的属性和事件。在这个例子中，按钮支持 `onClick` 事件，所以代码不会报错。
 
-### Bringing It All Together
+### 整合
 
-Let's bring each of our types and functions back together to produce our counter component -- this time with types specified. Let's revisit the types and functions that we wrote:
+接下来，我们通过整合介绍过的类型和函数来构建我们计数器组件。这一次我们会带上类型。
 
 ```purs
 -- This can be specified if your component takes input, or you can leave
@@ -225,9 +225,9 @@ render :: forall m. State -> H.ComponentHTML Action () m
 render = ...
 ```
 
-These types and functions are the core building blocks of a typical Halogen component. But they aren't sufficient on their own like this -- we need to bring them all together in one place. 
+这些类型和函数是 Halogen 组件的核心部分。但是单独每一部分都是不够的，我们需要把他们组合起来。
 
-We'll do that using the `H.mkComponent` function. This function takes a `ComponentSpec`, which is a record containing an `initialState`, `render`, and `eval` function, and produces a `Component` from it:
+我们需要使用 `H.mkComponent` 来做这一点。这个函数参数类型是 `ComponentSpec`，这个类型是一个包含了 `initialState`, `render` 和 `eval` 的结构体，函数返回一个 `Component` 类型值：
 
 ```purs
 component =
@@ -242,33 +242,33 @@ component =
     }
 ```
 
-We'll talk more about the `eval` function in future chapters. For the time being you can think of the `eval` function as defining how the component responds to events; for now, the only kind of events we care about are actions, and so the only function we'll use is `handleAction`.
+之后的章节我们会详细介绍 `eval` 函数。现在你只需要知道 `eval` 是定义组件如何响应事件的。我们现在需要响应的事件只有行为，所以我们只需要使用 `handleAction` 函数。
 
-Our component is now complete, but we're missing one last type definition: our component type.
+我们的组件基本完整了，但是我们还漏掉了最后一个概念：组件类型。
 
-### The `H.Component` Type
+### `H.Component` 类型
 
-The `mkComponent` function produces a component from a `ComponentSpec`, which is a record of the functions that Halogen needs to run a component. We'll get into more detail about this type in a subsequent chapter.
+`mkComponent` 函数根据 `ComponentSpec` 生成一个组件，组件其实是有函数构成的结构体。在下一章我们会探讨其细节。
 
 ```purs
 mkComponent :: H.ComponentSpec ... -> H.Component HH.HTML query input output m
 ```
 
-The resulting component has the type `H.Component`, which itself takes five type parameters that describe the public interface of the component. Our component doesn't communicate with parent components or child components, so it doesn't use any of these type variables. Still, we'll briefly step through them now so you know what's coming in subsequent chapters.
+得到的组件类型是 `H.Component`，这个类型有 5 个类型参数，每个类型参数描述了组建的一些公共接口。我们构建的组件不需要和父子组件通信，所以用不到这些。不过，我们还是会过一遍这些类型参数，以便更好的学习接下来的章节内容。
 
-1. The first parameter is always `HH.HTML`, indicating that the component produces Halogen HTML. It is possible for components to target things other than the DOM, in which case this would be different, but on the Web it's always `HH.HTML`.
-2. The second parameter `query` represents a way that parent components can communicate with this component. We will talk about it more when we talk about parent and child components.
-3. The third parameter `input` represents the input our component accepts. In our case, the component doesn't accept any input, so we'll leave this variable open.
-4. The fourth parameter `output` represents a way that this component can communicate with its parent component. We'll talk about it more when we talk about parent and child components.
-5. The final parameter, `m`, represents the monad that can be used to run effects in the component. Our component doesn't run any effects, so we'll leave this variable open.
+1. 第一个参数固定是 `HH.HTML`，表示组件生成的是 HTML。当然，组件也可以生成除 DOM 外的其他类型，但是在 Web 上总是 `HH.HTML` 。
+2. 第二个参数 `query` 描述父组件如何与本组件通信。我们会在后面介绍父子组件时介绍这个概念。
+3. 第三个参数 `input` 代表了本组件接受的输入。在本章的例子里，组件不接受任何输入，我们会使用类型参数。
+4. 第四个参数 `output` 描述了本组件任何与父组件通信。和 `query` 一样，我们会在后面介绍父子组件时介绍这个概念。
+5. 最后一个参数 `m`，描述了组件执行外部作用时所用到的 Monad 类型。在本章的例子里，组件不需要执行任何外部作用，我们会使用类型参数。
 
-Our counter component can therefore be specified by leaving all of the `H.Component` type variables open except for the first one, `HH.HTML`.
+我们计数器组件只需要声明 `HH.HTML`，其他类型参数都可以保持开放。
 
-## The Final Product
+## 最终结果
 
-That was a lot to take in! We've finally got our counter component fully specified with types. If you can comfortably build components like this one, you're most of the way to a thorough understanding of building Halogen components in general. The rest of this guide will build on top of your understanding of state, actions, and rendering HTML.
+介绍了很多内容之后，我们终于为计数器组件声明了所有的类型信息。如果你能自如的按照这种方式构建组件，那你已经对构建 Halogen 组件有了大体的认识。本指南剩余的内容都是建立在对内部状态、行为和渲染 HTML 的基础之上的。
 
-We've added a `main` function that runs our Halogen application so that you can try this example out by pasting it into [Try PureScript](https://try.purescript.org). We'll cover how to run Halogen applications in a later chapter -- for now you can ignore the `main` function and focus on the component we've defined.
+下面的代码里，我们添加了 `main` 函数，这样就可以把代码复制到 [Try PureScript](https://try.purescript.org) 中运行。我们在之后的章节会介绍如何运行 Halogen 应用。现在你可以先忽略 `main` 函数，重点关注我们定义的组件。
 
 ```purs
 module Main where
