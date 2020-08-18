@@ -1,46 +1,46 @@
-# Performing Effects
+# 执行外部作用
 
-We've covered a lot of ground so far. You know how to write Halogen HTML. You can define components that respond to user interactions and model each part of the component in types. With this foundation we can move on to another vital tool when writing applications: performing effects.
+我们到现在已经介绍了很多内容，如何编写 Halogen HTML，如何定义可以相应用户交互的组件以及需要使用的类型。有了这些基础之后，我们就可以进入下一个编写应用的工具：执行外部副作用。
 
-In this chapter we'll explore how to perform effects in your component through two examples: generating random numbers and making HTTP requests. Once you know how to perform effects you are well on your way to mastering Halogen fundamentals.
+这一章我们会通过两个例子来讲述如何在组件中执行外部副作用：生成随机数和发送 HTTP 请求。当你知道如何执行副作用之后，你就走上了掌握 Halogen 之路了。
 
-Before we start, it's important to know that you can only perform effects during evaluation, which means functions like `handleAction` which use the type `HalogenM`. You can't perform effects when you produce your initial state or during rendering. Since you can only perform effects when you're within `HalogenM`, let's briefly learn more about it before diving in to the examples.
+在开始之前，最重要的是知道我们只能在求值（evaluation）的时候才能执行副作用，也就意味着只能在函数使用了类型 `HalogenM` 的 `handleAction` 函数中。在应用初始化内部状态或者渲染过程中是不行的。因为我们只能在 `HalogenM` 中执行副作用，在介绍例子之前，我们首先简单介绍一下这个类型。
 
-## The `HalogenM` Type
+## `HalogenM` 类型
 
-If you recall from last chapter, the `handleAction` function returns a type called `HalogenM`. Here's the `handleAction` we wrote:
+在上一章， `handleAction` 函数返回一个类型 `HalogenM`。下面是我们定义的 `handleAction` ：
 
 ```purs
 handleAction :: forall output m. Action -> HalogenM State Action () output m Unit
 ```
 
-`HalogenM` is a crucial part of Halogen, often called the "eval" monad. This monad enables Halogen features like state, forking threads, starting subscriptions, and more. But it's quite limited, concerning itself only with Halogen-specific features. In fact, Halogen components have no built-in mechanisms for effects!
+`HalogenM` 是 Halogen 的关键，通常称为“求值”单子（"eval" monad）。借助这个单子，Halogen 支持了内部状态、线程、订阅等功能。但是其本身功能有限，支持 Halogen 特定的功能。实际上， Halogen 组件并没有内置外部副作用的支持。
 
-Instead, Halogen lets you choose what monad you would like to use with `HalogenM` in your component. You gain access to all the capabilities of `HalogenM` _and also_ whatever capabilities your chosen monad supports. This is represented with the type parameter `m`, which stands for "monad".
+相反，Halogen 允许你指定组件想要使用的单子。这样，你既获得了 `HalogenM` 的所有功能，也获得了你所选择的单子支持的功能。这一点是靠类型参数 `m` 指定的，`m` 代表了 "monad"。
 
-A component that only uses Halogen-specific features can leave this type parameter open. Our counter, for example, only updated state. But a component that performs effects can use the `Effect` or `Aff` monads, or you can supply a custom monad of your own.
+如果组件只需要使用 Halogen 特定的功能，可以保持这个类型参数的开放性。例如计数器，只需要更新内部状态。如果一个组件需要执行副作用，则需要使用 `Effect` 或者 `Aff` 单子，或者可以使用自己定制的单子。
 
-This `handleAction` is able to use functions from `HalogenM` like `modify_` and can also use effectful functions from `Effect`:
+下面的 `handleAction` 函数既可以执行 `HalogenM` 提供中的函数 `modify_` ，而也可以执行 `Effect` 中有外部作用的函数:
 
 ```purs
 handleAction :: forall o. Action -> HalogenM State Action () o Effect Unit
 ```
 
-This one can use functions from `HalogenM` and also effectful functions from `Aff`:
+下面这个函数则可以使用来自 `HalogenM` 中的函数以及 `Aff` 中有副作用的函数：
 
 ```purs
 handleAction :: forall output. Action -> HalogenM State Action () output Aff Unit
 ```
 
-It is more common in Halogen to use constraints on the type parameter `m` to describe what the monad can do rather than choose a specific monad, which allows you to mix several monads together as your application grows. For example, most Halogen apps would use functions from `Aff` via this type signature:
+通常，在 Halogen 中会在类型参数 `m` 上使用类型约束来描述这个单子能够做什么，而不是使用特定的单子类型，这样，在应用功能复杂之后，你可以混合使用多个不同的单子。例如，很多 Halogen 应用使用 `Aff` 是都会使用类型：
 
 ```purs
 handleAction :: forall output m. MonadAff m => Action -> HalogenM State Action () output m Unit
 ```
 
-This lets you do everything the hardcoded `Aff` type did, but it also lets you mix in other constraints too.
+这样，你既可以和写死 `Aff` 类型一样，而且你还可以混合使用其他的类型约束。
 
-One last thing: when you choose a monad for your component it will show up in your `HalogenM` type, your `Component` type, and, if you are using child components, in your `ComponentHTML` type:
+最后一点：当你为组件选择了单子之后，这个单子类型会出现在 `HalogenM` 类型， `Component` 类型以及 `ComponentHTML` 类型中（如果使用了子组件）：
 
 ```purs
 component :: forall query input output m. MonadAff m => H.Component query input output m
@@ -52,13 +52,13 @@ handleAction :: forall output m. MonadAff m => Action -> HalogenM State Action (
 render :: forall m. State -> H.ComponentHTML Action () m
 ```
 
-## An `Effect` Example: Random Numbers
+## 一个使用 `Effect` 的例子：随机数字
 
-Let's create a new, simple component that generates a new random number each time you click a button. As you read through the example, notice how it uses the same types and functions that we used to write our counter. Over time you'll become used to scanning the state, action, and other types of a Halogen component to get a gist of what it does, and familiar with standard functions like `initialState`, `render`, and `handleAction`.
+我们来创建一个简单的新组件，这个组件里，每次你点击按钮，都会生成一个新的随机数。阅读这个例子，注意我们是怎么使用和计数器组件相同的类型和函数的。时间长了，你就会习惯看一下状态、行为和 Halogen 组件中的类型就大致了解这个组件做了些什么，而且会逐渐习惯 `initialState`、 `render` 和 `handleAction`这些标准函数。
 
-> You can paste this example into [Try Purescript](https://try.purescript.org) to explore it interactively. You can also see and run the [full example code](https://github.com/purescript-halogen/purescript-halogen/tree/master/examples/effects-effect-random) from the `examples` directory in this repository.
+> 你可以把这个例子粘贴到 [Try Purescript](https://try.purescript.org) 中运行。你也可以在目录 `examples` 目录中查看运行这个例子的[完整代码](https://github.com/purescript-halogen/purescript-halogen/tree/master/examples/effects-effect-random)。
 
-Notice that we don't perform any effects in our `initialState` or `render` functions -- for example, we initialize our state to `Nothing` rather than generate a random number for our initial state -- but we're free to perform effects in our `handleAction` function (which uses the `HalogenM` type).
+注意，我们并没有在 `initialState` 和 `render` 函数中执行副作用 -- 例如，我们初始化状态为 `Nothing` ，而不是生成一个随机数，但是我们可以在函数 `handleAction` 中执行副作用（使用了 `HalogenM` 类型）。
 
 ```purs
 module Main where
@@ -115,12 +115,12 @@ handleAction = case _ of
     H.modify_ \_ -> Just newNumber
 ```
 
-As you can see, a component that performs effects is not much different from a component that doesn't! We've only done two things:
+可以看到，执行副作用的组件和普通逐渐没有太大车陂！基本上我们只需做两件事：
 
-1. We added a `MonadEffect` constraint to the `m` type parameter for our component _and_ for our `handleAction` function. We don't need the constraint for our render function because we don't have any child components.
-2. We actually _used_ an effect for the first time: the `random` function, which comes from `Effect.Random`.
+1. 为类型参数 `m` 和 `handleAction` 函数添加 `MonadEffect`。因为我们没有使用子组件，所以我们不需要为 `render` 函数添加类型约束。
+2. 第一次使用了执行副作用的函数：来自 `Effect.Random` 模块的 `random` 函数。
 
-Let's break down using this effect a little more.
+让我们分解一下如何使用这个副作用的。
 
 ```purs
 --                          [1]
@@ -131,23 +131,23 @@ handleAction = case _ of
     H.modify_ \_ -> Just newNumber   -- [3]
 ```
 
-1. We have constrained our `m` type parameter to say we support any monad, so long as that monad supports `MonadEffect`. It's another way to say "We need to be able to use `Effect` functions in our evaluation code."
-2. The `random` function has the type `Effect Number`. But we can't use it directly: our component doesn't support `Effect` but rather _any_ monad `m` so long as that monad can run effects from `Effect`. It's a subtle difference, but in the end we require the `random` function to have the type `MonadEffect m => m Number` instead of being `Effect` directly. Fortunately, we can convert any `Effect` type to `MonadEffect m => m` using the `liftEffect` function. This is a common pattern in Halogen, so keep `liftEffect` in mind if you're using `MonadEffect`.
-3. The `modify_` function lets you update state, and it comes directly from `HalogenM` with the other state update functions. Here we use it to write the new random number to our state.
+1. 为类型参数 `m` 添加了约束，表明我们支持任何单子，只要这个单子类型满足了 `MonadEffect` 约束，这是我们需要执行 `Effect` 函数的另外一种说法。
+2. `random` 函数的类型是 `Effect Number`，但是我们不能直接使用：组件在声明时使用的是 _任何_ 可以 `Effect` 中执行副作用的单子。有些细微的差别，因为我们需要的是类型 `MonadEffect m => m Number` 而不是 `Effect` 。幸运的是，我们可以使用 `liftEffect` 函数把任意 `Effect` 类型转换成 `MonadEffect m => m` 。这是 Halogen 中的常见模式，所以在使用 `MonadEffect` 时需要时刻记住 `liftEffect` 。
+3. `modify_` 函数用来更新内部状态，和其他状态更新函数一样，都是来自 `HalogenM` 。这里，我们用来把随机数更新到内部状态中。
 
-This is a nice example of how you can freely interleave effects from `Effect` with Halogen-specific functions like `modify_`. Let's do it again, this time using the `Aff` monad for asynchronous effects.
+这个例子很好的展示了如何交替使用 `Effect` 中函数和 Halogen 中的特定函数 `modify_`。接下来，我们看一下如何用相同的方式使用 `Aff` 中异步外部作用。
 
-## An `Aff` Example: HTTP Requests
+## 一个 `Aff` 例子：HTTP 请求
 
-It's common to fetch information from elsewhere on the Internet. For example, let's say we'd like to work with GitHub's API to fetch users. We'll use the [`affjax`](https://pursuit.purescript.org/packages/purescript-affjax) package to make our requests, which itself relies on the `Aff` monad for asynchronous effects.
+从网络上获取信息是常见的操作。例如，我们想要用 Github 的 API 获取用户信息。我们需要使用 [`affjax`](https://pursuit.purescript.org/packages/purescript-affjax) 来发送请求，而这个库也是依赖 `Aff` 来实现异步作用的。
 
-This example is even more interesting, though: we'll also use the `preventDefault` function to prevent form submission from refreshing the page, which runs in `Effect`. That means our example shows how you can interleave different effects together (`Effect` and `Aff`) along with Halogen functions (`HalogenM`).
+这个例子会更加有趣，因为：我们会使用 `preventDefault` 函数来避免表单提交时页面刷新，这一步是在 `Effect` 单子中。因此，这个例子展示了我们如何混合使用不同的外部作用（ `Effect` 和 `Aff`）以及 Halogen 函数（`HalogenM`）。
 
-> As with the Random example, you can paste this example into [Try Purescript](https://try.purescript.org) to explore it interactively. You can also see and run the [full example code](https://github.com/purescript-halogen/purescript-halogen/tree/master/examples/effects-aff-ajax) from the `examples` directory in this repository.
+> 和 Random 例子一样，你可以把这个例子复制粘贴到 [Try Purescript](https://try.purescript.org) 中查看。你也可以在代码仓库中运行这个[完整例子](https://github.com/purescript-halogen/purescript-halogen/tree/master/examples/effects-aff-ajax) 。
 
-This component definition should start to look familiar. We define our `State` and `Action` types and implement our `initialState`, `render`, and `handleAction` functions. We bring them together into our component spec and turn them into a valid component `H.mkComponent`.
+这个组件定义现在看起来应该很熟悉了。我们首先定义了 `State` 和 `Action` 类型，然后实现了 `initialState`, `render`, 和 `handleAction` 函数。最后我们通过 `H.mkComponent` 他们组合为组件定义然后转化为一个合法的组件。
 
-Once again, notice that our effects are concentrated in the `handleAction` function and no effects are performed when making the initial state or rendering Halogen HTML.
+再次注意，我们只是在 `handleAction` 函数中执行外部作用，在初始化状态和渲染 Halogen HTML 时没有执行任何副作用。
 
 ```purs
 module Main where
@@ -238,18 +238,17 @@ handleAction = case _ of
     H.modify_ _ { loading = false, result = map _.body (hush response) }
 ```
 
-This example is especially interesting because:
+这里例子非常有意思，因为：
 
-1. It mixes together functions from multiple monads (`preventDefault` is `Effect`, `AX.get` is `Aff`, and `gets` and `modify_` are `HalogenM`). We're able to use `liftEffect` and `liftAff` along with our constraints to make sure everything plays well together.
+1. 混合使用了多个单子（ `preventDefault` 是 `Effect`， `AX.get` 是 `Aff`，而 `gets` 和 `modify_` 是 `HalogenM`）。我们可以在组件里使用 `liftEffect` 和 `liftAff` 来配合使用它们。
 2. We only have one constraint, `MonadAff`. That's because anything that can be run in `Effect` can also be run in `Aff`, so `MonadAff` implies `MonadEffect`.
-3. We're making multiple state updates in one evaluation.
+3. 我们在同一次求值过程中更改了多次内部状态。
 
-That last point is especially important: when you modify state your component renders. That means that during this evaluation we:
+最后一点特别重要：更新内部状态会触发组件渲染。所以在单次求值过程中：
 
-1. Set `loading` to `true`, which causes the component to re-render and display "Working..."
-2. Set `loading` to `false` and update the result, which causes the component to re-render and display the result (if there was one).
+1. 将 `loading` 设为 `true`，触发组件重新渲染，显示 "Working..."
+2. 将 `loading` 设为 `false`， 更新 `result`，触发组件渲染，显示 result （如果 API 返回了的话）
 
-It's worth noting that because we're using `MonadAff` our request will not block the component from doing other work, and we don't have to deal with callbacks to get this async superpower. The computation we've written in `MakeRequest` simply suspends until we get the response and then proceeds to update the state the second time.
+值得注意的是，我们使用 `MonadAff` 时，发送请求并不会阻塞组建，卫门也不需要用回调函数来处理异步行为。我们在 `MakeRequest` 执行的计算会被挂起，知道我们得到了响应结果，然后会被重启执行第二次状态更新。
 
-It's a smart idea to only modify state when necessary and to batch updates together if possible (like how we call `modify_` once to update both the `loading` and `result` fields). That helps make sure you're only re-rendering when needed.
-
+尽量只在必要的时候更新状态或者选择批量更新状态是个明智的选择（像我们调用一次 `modify_` 去同时更新 `loading` 和 `result` 字段），这样可以避免重复渲染组件。
