@@ -1,30 +1,30 @@
-# Lifecycles and Subscriptions
+# 生命周期和订阅
 
-The concepts you've learned so far cover the majority of Halogen components you'll write. Most components have internal state, render HTML elements, and respond by performing actions when users click, hover over, or otherwise interact with the rendered HTML.
+我们现在学过的概念已经能够包含编写 Halogen 组件所需的大部分知。大多数组件有内部状态、渲染 HTML 以及响应用户的点击、鼠标悬停或者其他在 HTML 上的交互行为。
 
-But actions can arise internally from other kinds of events, too. Here are some common examples:
+其实行为也可以从其他时间里触发，如下是几个常见的例子：
 
-1. You need to run an action when the component starts up (for example, you need to perform an effect to get your initial state) or when the component is removed from the DOM (for example, to clean up resources you acquired). These are called **lifecycle events**.
-2. You need to run an action at regular intervals (for example, you need to perform an update every 10 seconds), or when an event arises from outside your rendered HTML (for example, you need to run an action when a key is pressed on the DOM window, or you need to handle events that occur in a third-party component like a text editor). These are handled by **event source subscriptions**, sometimes just called **subscriptions** or **event sources**.
+1. 当组件启动时需要执行某种行为（例如执行某种外部作用来初始化状态）或者当组件从 DOM 中移除时（例如释放申请到的资源）。这些被称为**生命周期事件**。
+2. 你需要定期的执行某个行为（例如每隔 10 秒钟执行更新），或者当事件发生在生成的 HTML 之外时（例如，当用户按下按钮时执行某种行为），又或者你需要处理某些第三方组件的事件（例如某些文本编辑器）。这些可以通过**事件源订阅**机制处理，又是我们也叫做**订阅机制**或者**事件源机制**。
 
-We'll learn about one other way actions can arise in a component when we learn about parent and child components in the next chapter. This chapter will focus on lifecycles and subscriptions.
+在下一章学习父子组件时，我们会学习另外注意红触发行为的方式。这一章我们会主要关注生命周期和订阅机制。
 
-## Lifecycle Events
+## 生命周期事件
 
-Every Halogen component has access to two lifecycle events:
+每个 Halogen 组件可以使用两个生命周期事件：
 
-1. The component can evaluate an action when it is initialized (Halogen creates it)
-2. The component can evaluate an action when it is finalized (Halogen removes it)
+1. 组件初始化时可以执行某些行为（Halogen 创建组件时）
+2. 组件销毁时可以执行某些行为（Halogen 移除组件时）
 
-We specify what action (if any) to run when the component is initialized and finalized as part of the `eval` function -- the same place where we've been providing the `handleAction` function. In the next section we'll get into more detail about what `eval` is, but first lets see an example of lifecycles in action.
+我们在 `eval` 函数中声明组件初始化和销毁时需要执行的行为，和我们提供 `handleAction` 函数是相同的。在下一章，我们会讨论 `eval` 的详细细节，这里我们先看一下生命周期的实际应用。
 
-The following example is nearly identical to our random number component, but with some important changes.
+下面这个例子和前面随机数的例子几乎一样，有几个重要的不同指出：
 
-1. We have added `Initialize` and `Finalize` in addition to our existing `Regenerate` action.
-2. We've expanded our `eval` to include an `initialize` field that states our `Initialize` action should be evaluated when the component initializes, and a `finalize` field that states our `Finalize` action should be evaluated when the component finalizes.
-3. Since we have two new actions, we've added two new cases to our `handleAction` function to describe how to handle them.
+1. 除了 `Regenerate`，我们还添加了 `Initialize` 和 `Finalize` 行为
+2. 我们扩展了 `eval` ，添加了 `initialize` 字段，表明组件初始化时需要执行 `Initialize` 行为，同时添加了另外一个 `finalize` 字段，声明组件销毁时需要执行 `Finalize` 行为。
+3. 因为我们添加了两个新的行为，所以我们在 `handleAction` 函数里添加了两个 `case` 语句来处理这个两个行为。
 
-Try reading through the example:
+尝试阅读一下代码：
 
 ```purs
 module Main where
@@ -99,9 +99,9 @@ handleAction = case _ of
     log ("Finalized! Last number was: " <> show number)
 ```
 
-When this component mounts we'll generate a random number and log it to the console. We'll keep regenerating random numbers as the user clicks the button, and when this component is removed from the DOM it will log the last number it had in state.
+当组件初始化时，我们会生成一个随机数然后输出到命令行中。接下来我们会在用户点击按钮之后生成随机数，最后当组件被销毁时，我们会将组件状态中的随机数输出到命令行中。
 
-We made one other interesting change in this example: in our `Initialize` handler we called `handleAction Regenerate` -- we called `handleAction` recursively. It can be convenient to call actions from within other actions from time to time as we've done here. We could have also inlined `Regenerate`'s handler -- the following code does the same thing:
+另一个有意思的改动是：在处理 `Initialize` 时，我们调用了 `handleAction Regenerate` -- 也即是我们递归调用了 `handleAction` 函数。递归调用其他行为处理时很方便的，和我们这里做的一样。当然我们也可以内联 `Regenerate` 的处理函数，像下面的代码这样：
 
 ```purs
   Initialize -> do
@@ -110,15 +110,15 @@ We made one other interesting change in this example: in our `Initialize` handle
     log ("Initialized: " <> show newNumber)
 ```
 
-Before we move on to subscriptions and event sources, let's talk more about the `eval` function.
+在我们介绍订阅和事件源之前，我们先来看一下 `eval` 函数。
 
-## The `eval` Function, `mkEval`, and `EvalSpec`
+## `eval` 函数， `mkEval` 以及 `EvalSpec`
 
-We've been using `eval` in all of our components, but so far we've only handled actions arising from our Halogen HTML via the `handleAction` function. But the `eval` function can describe _all_ the ways our component can evaluate `HalogenM` code in response to events.
+在迄今为止我们介绍的所有组件中都使用了 `eval` 函数，但是我们只使用了 `handleAction` 函数来处理组件内部触发的行为。但是 `eval` 函数可以描述组件在响应事件时求值 `HalogenM` 的所有方式。
 
-In the vast majority of cases you don't need to care much about all the types and functions involved in the component spec and eval spec described below, but we'll briefly break down the types so you have an idea of what's going on.
+在多数情况下，你不需要关注组件规范以及求值规范里的所有类型和函数，但是我们还是会分解涉及到的类型，以便你能了解到底是怎么工作的。
 
-The `mkComponent` function takes a `ComponentSpec`, which is a record containing three fields:
+`mkComponent` 函数接收一个 `ComponentSpec` 做参数，这个参数包含三个字段：
 
 ```purs
 H.mkComponent
@@ -128,13 +128,13 @@ H.mkComponent
   }
 ```
 
-We've spent plenty of time with the `initialState` and `render` functions already. But the `eval` function may look strange -- what is `HalogenQ`, and how do functions like `handleAction` fit in? For now, we'll focus on the most common use of this function, but you can find the full details in the Concepts Reference.
+我们之前已经花精力介绍过了 `initialState` 和 `render` 两个函数。但是 `eval` 函数看起来不一样 -- 什么是 `HalogenQ`以及函数 `handleAction` 是怎么配合进来的？现在我们只需要关注这个函数的常见使用方式，可以在概念索引（未完成）中找到详细细节。
 
-The `eval` function describes how to handle events that arise in the component. It's usually constructed by applying the `mkEval` function to an `EvalSpec`, the same way we applied `mkComponent` to a `ComponentSpec` to produce a `Component`.
+`eval` 函数描述了如何处理组件内部触发的事件。通常我们通过使用一个 `EvalSpec` 值当参数调用 `mkEval` 函数来生成这个函数，和我们通过使用 `ComponentSpec` 当参数调用 `mkComponent` 生成 `Component` 一样。
 
-For convenience, Halogen provides an already-complete `EvalSpec` called `defaultEval`, which does nothing when an event arises in the component. By using this default value you can override just the values you care about, while leaving the rest of them doing nothing.
+为了方便，Halogen 提供了一个完整的 `EvalSpec` 实现，就是 `defaultEval`，这个默认的实现在组件事件时不执行任何操作。使用这个默认实现，你可以选择性的覆盖掉你需要的值，其余部分则不会做任何事情。
 
-Here's how we've defined `eval` functions that only handle actions so far:
+下面是我们如何定义一个只处理行为的 `eval` 函数：
 
 ```purs
 H.mkComponent
@@ -147,9 +147,9 @@ H.mkComponent
 handleAction = ...
 ```
 
-_Note_: `initialState` and `render` are set using abbreviated _record pun_ notation; however, `handleAction` cannot be set with a pun in this case because it is part of a _record update_. More information about _record pun_ and _record update_ syntax is available in the [Records Language Reference](https://github.com/purescript/documentation/blob/master/language/Records.md#record-update).
+_注意_: `initialState` 和 `render` 函数使用 _record pun_ 定义的，但是 `handleAction` 却不能使用这种方式，原因它时 _结构体更新_ 的一部分。更多信息，请参考 [结构体语言索引](https://github.com/purescript/documentation/blob/master/language/Records.md#record-update).
 
-You can override more fields, if you need to. For example, if you need to support an initializer then you would override the `initialize` field too:
+如果需要，你可以重写其他的字段。例如，如果你需要支持初始化操作，你可以重写 `initialize` 字段：
 
 ```purs
 H.mkComponent
@@ -162,7 +162,7 @@ H.mkComponent
   }
 ```
 
-Let's take a quick look at the full type of `EvalSpec`:
+让我们看一下 `EvalSpec` 的完整类型：
 
 ```purs
 type EvalSpec state query action slots input output m =
@@ -174,9 +174,9 @@ type EvalSpec state query action slots input output m =
   }
 ```
 
-The `EvalSpec` covers all the types available internally in your component. Fortunately, you don't need to specify this type anywhere -- you can just provide a record to `mkEval`. We'll cover the `handleQuery` and `receive` functions as well as the `query` and `output` types in the next chapter, as they're only relevant for child components.
+`EvalSpec` 包含了组件中涉及到的所有类型。不过好在你不需要声明这个类型 -- 你可以提供给 `mkEval` 一个结构体。我们会在后面的章节里介绍 `handleQuery` 和 `receive` 函数，当然还有 `query` 和 `output` 类型，因为这些类型和子组件有关。
 
-Since in normal use you'll override specific fields from `defaultEval` rather than write out a whole eval spec yourself, let's also look at what `defaultEval` implements for each of these functions:
+正常情况下，我们都只需要重写 `defaultEval` 中的某个字段，而不是重新实现一个完整的 `EvalSpec`，让我们来看一下 `defaultEval` 是如何实现每个函数的：
 
 ```purs
 defaultEval =
@@ -188,26 +188,26 @@ defaultEval =
   }
 ```
 
-Now, let's move to the other common source of internal events: event sources we've subscribed to.
+现在，让我们看一下另外一个内部时间的来源：订阅事件源。
 
-## Subscriptions
+## 订阅
 
-Sometimes you need to handle events arising internally that don't come from a user interacting with the Halogen HTML you've rendered. Two common sources are time-based actions and events that happen on an element outside one you've rendered (like the browser window).
+有时，我们需要处理一些并不是在我们渲染的 Halogen HTML 中触发的事件或者某种定期触发的事件。两个常见的例子，一是时间相关的事件，另外一个则是发生在另外一个 Halogen DOM 树之外节点的事件（例如 window）。
 
-In Halogen these kinds of events come from **event sources**. Components can subscribe to event sources by providing an action that should run every time an event happens.
+在 Halogen 中，这些事件都来自 **事件源** 。组件可以订阅这些事件源，指定当这些事件发生时需要触发的行为。
 
-Event sources are usually created with one of these functions:
+事件源通常使用以下方法来创建：
 
-1. `effectEventSource` and`affEventSource` let you produce an event source from an `Effect` or `Aff` function, respectively.
-2. `eventListenerEventSource` lets you produce an event source by attaching an event listener to the DOM, like attaching a resize event to the browser window.
+1. `effectEventSource` 和 `affEventSource` 这两个函数可以从 `Effect` 或则 `Aff` 函数中创建事件源。
+2. `eventListenerEventSource` 可以通过在指定 DOM 节点添加事件监听器来创建一个事件源，例如监听浏览器窗口的 resize 事件。
 
-An event source can be thought of as a stream of actions: actions can be produced at any time from the event source, and your component will evaluate those actions so long as it remains subscribed to the event source. It's common to use create an event source and subscribe to it when the component initializes, though you can subscribe or unsubscribe from an event source at any time.
+事件源可以被当成一个行为的流：事件流随时可以生成行为，组件只要订阅了这个事件源，就需要执行这些行为。通常情况下，都是在组件初始化时创建并且订阅事件，虽然我们可以在任何订阅或者取消订阅事件源。
 
-Let's see two examples of event sources in action: an `Aff`-based timer that counts the seconds since the component mounted and an event-listener-based stream that reports keyboard events on the document.
+让我们看两个事件源的实例：一个是基于 `Aff` 的定时器，会对组件初始化后的秒数进行计数，另外一个则是基于事件监听的事件流，他会报告文档中的键盘事件。
 
-### Implementing a Timer
+### 实现一个定时器
 
-Our first example will use an `Aff`-based timer to increment every second.
+我们的第一个例子是基于 `Aff` 的定时器，每一秒实现自加一。
 
 ```purs
 module Main where
@@ -273,9 +273,9 @@ timer = EventSource.affEventSource \emitter -> do
     Aff.killFiber (error "Event source finalized") fiber
 ```
 
-Almost all of this code should look familiar, but there are two new parts.
+大部分代码应该都很熟悉，但是还是有些新知识。
 
-First, we've defined an event source that will emit a `Tick` action every second until it is closed:
+首先，我们定义了一个事件源，这个事件源每秒钟都会触发一个 `Tick` 行为，直到事件源被关闭。
 
 ```purs
 timer :: forall m. MonadAff m => EventSource m Action
@@ -288,9 +288,9 @@ timer = EventSource.affEventSource \emitter -> do
     Aff.killFiber (error "Event source finalized") fiber
 ```
 
-The `affEventSource` and `effectEventSource` functions take a callback that provides you with an `Emitter`. You can use this with the `EventSource.emit` function to broadcast an action, or with the `EventSource.close` function to close the event source (this lets you close an event source from within, instead of having to wait for the event source to be closed by its subscriber or automatically when the component finalizes). You can return a cleanup function to run when the event source closes, called its finalizer. In this case, we use the finalizer to kill the fiber we forked to loop the count.
+`affEventSource` 和 `effectEventSource` 函数接受一个回调函数，这个回调函数的参数是一个 `Emitter` 值。以这个值作为参数，可以调用 `EventSource.emit` 函数广播一个行为，也可以调用 `EventSource.close` 函数关闭这个事件流（这样我们可以直接在内部关闭这个事件源，而不是等到订阅者关闭或者组件销毁时自动关闭）。 我们可以返回要给清理函数，这个清理函数在事件源关闭时会被调用，被称作终结器。在这个例子里，我们会杀死我们用来计数的 Fiber。
 
-Second, we use the `subscribe` function from Halogen to attach to the event source:
+第二部，我们使用了 Halogen 中的 `subscribe` 函数订阅这个事件源：
 
 ```purs
   Initialize -> do
@@ -298,17 +298,17 @@ Second, we use the `subscribe` function from Halogen to attach to the event sour
     pure unit
 ```
 
-The `subscribe` function takes an event source as an argument and it returns a `SubscriptionId`. You can pass this `SubscriptionId` to the `unsubscribe` function at any point to close the event source, run its cleanup function, and stop listening to outputs from it. Components automatically unsubscribe from any event sources when the component finalizes, so we don't need to unsubscribe here.
+`subscribe` 函数接受一个事件源作为参数，会返回一个 `SubscriptionId`。你可以将 `SubscriptionId` 传递到 `unsubscribe` 函数来关闭这个事件源，执行它的清理函数，这样你就不会监听到这事件源的输出。组件在被销毁时会自动取消所有事件源的订阅，不需要手动执行取消订阅的操作。
 
-You may also be interested in the [Ace editor example](https://github.com/purescript-halogen/purescript-halogen/tree/master/examples/ace), which subscribes to events that happen inside a third-party JavaScript component and uses them to trigger actions in a Halogen component.
+刚兴趣的话可以看一下[Ace 编辑器的例子](https://github.com/purescript-halogen/purescript-halogen/tree/master/examples/ace)，这个例子里，我们订阅了第三方组件里的事件，用这些事件触发 Halogen 组件的行为。
 
-### Using Event Listeners As Event Sources
+### 使用事件监听器做事件源
 
-Another common reason to use event sources is when you need to react to events in the DOM that don't arise directly from HTML elements you control. For example, we might want to listen to events that happen on the document itself.
+另外一个需要使用事件源的场景时当需要响应某些 DOM 事件，但是这些 DOM 元素并不是 Halogen 可以直接控制的。例如我们需要 HTML 文档元素自身的一些事件，例如滚动、键盘等。
 
-In the following example we subscribe to key events on the document, save any characters that are typed while holding the `Shift` key, and stop listening if the user hits the `Enter` key. It demonstrates using the `eventListenerEventSource` function to attach an event listener and using the `H.unsubscribe` function to choose when to clean it up.
+在下面的例子里，我们订阅的文档中的键盘事件，然后保存了所有在长按 `Shift` 的同事点击的按键，当点击回车键时取消监听事件。这个例子演示了如何使用 `eventListenerEventSource` 函数来绑定事件监听器以及使用 `H.unsubscribe` 函数取消订阅。
 
-There is also a corresponding [example of keyboard input](https://github.com/purescript-halogen/purescript-halogen/tree/master/examples/keyboard-input) in the examples directory.
+在示例代码仓库里也有一个响应的[键盘输入例子](https://github.com/purescript-halogen/purescript-halogen/tree/master/examples/keyboard-input)。
 
 ```purs
 module Main where
@@ -390,11 +390,11 @@ handleAction = case _ of
         pure unit
 ```
 
-In this example we used the `H.subscribe'` function, which passes the `SubscriptionId` to the event source instead of returning it. This is an alternative that lets you keep the ID in the action type instead of the state, which can be more convenient.
+在这个例子中，我们使用了 `H.subscribe'` 函数，这个函数会传递 `SubscriptionId` 到事件源，而不是返回它。这样我们可以把 ID 保存在行为，而不是内部状态中，会更加方便。
 
-We wrote our event source right into our code to handle the `Initialize` action, which registers an event listener on the document and emits `HandleKey` every time a key is pressed.
+我们把事件源相关逻辑实现在处理 `Initialize` 行为的代码中，包括在 HTML 文档注册事件监听器以及在处理键盘事件时触发 `HandleKey` 行为。
 
-`eventListenerEventSource` works a little differently from the other event sources. It uses types from the `purescript-web` libraries for working with the DOM to manually construct an event listener:
+`eventListenerEventSource` 和其他事件源有一些不同。它使用了来自 `purescript-web` 库中的类型和函数，手动在 DOM 中注册事件监听器。
 
 ```
 eventListenerEventSource
@@ -406,14 +406,14 @@ eventListenerEventSource
   -> EventSource m action
 ```
 
-It takes a type of event to listen to (in our case: `keyup`), a target indicating where to listen for events (in our case: the `HTMLDocument` itself), and a callback function that transforms the events that occur into a type that should be emitted (in our case: we emit our `Action` type by capturing the event in the `HandleKey` constructor).
+这个函数的参数包含：监听的事件类型（在这个例子里时 `keyup`）、监听的目标（在这个例子里是 `HTMLDocument` 元素）、回调函数，这个回调函数负责将事件转化为一个需要触发的类型（在这个例子里，我们触发了 `Action` 类型的值，这个包含了捕获的时间）。
 
-## Wrapping Up
+## 总结
 
-Halogen components use the `Action` type to handle various kinds of events that arise internally in a component. We've now seen all the common ways this can happen:
+Halogen 组件使用 `Action` 类型来处理组件内的各种事件。这些事件可能发生的方式包括：
 
-1. User interaction with HTML elements we rendered
-2. Lifecycle events
-3. Event sources, whether via `Aff` and `Effect` functions or from event listeners on the DOM
+1. 用户在我们渲染的 HTML 元素上执行了交互操作
+2. 声明周期事件
+3. 事件源，依赖 `Aff` 和 `Effect` 函数或者 DOM 上的事件监听器。
 
-You now know all the essentials for using Halogen components in isolation. In the next chapter we'll learn how to combine Halogen components together into a tree of parent and child components.
+现在，你已经了解了单个 Halogen 组件所必须的知识。在下一章，我们将会学习如何组合多个 Halogen 组件，构建一个父子组件树。
