@@ -1,48 +1,48 @@
-# Parent and Child Components
+# 父子组件
 
-Halogen is an unopinionated UI library: it allows you to create declarative user interfaces without enforcing a particular architecture.
+Halogen 是一个没有特定倾向的 UI 库：你可以在没有特定架构要求下创建用户界面。
 
-Our applications so far have consisted of a single Halogen component. You can build large applications as a single component and break the state and the `handleAction` and `render` functions into separate modules as the app grows. This lets you use the Elm architecture in Halogen.
+目前为止，我们的应用都只是包含单个 Halogen 组件。你可以像 Elm 架构那样，构建一个单组件应用，然后逐步拆分 `handleAction` 和 `render` 函数到独立的模块中。
 
-However, Halogen supports architectures with arbitrarily deep trees of components. That means any component you write is allowed to contain more components, each with their own state and behaviors. Most Halogen applications use a component architecture in this way, including the [Real World Halogen](https://github.com/thomashoneyman/purescript-halogen-realworld) app.
+不过， Halogen 也支持任意深度的组件树。这意味任意组件都可以包含其他更多子组件，每个子组件都可以有自己的状态和行为。大多数 Halogen 组件都是用这种架构，包括 [实战 Halogen](https://github.com/thomashoneyman/purescript-halogen-realworld) 中的应用。
 
-When you move from a single component to many components you begin to need mechanisms so that components can communicate with one another. Halogen gives us three ways for a parent and child component to communicate:
+当涉及到多个组件时，我们就需要一种组件间进行通信的机制。Halogen 提供了三种父子组件通信的方式：
 
-1. A parent component can send _queries_ to a child component, which either tell the child component to do something or request some information from it.
-2. A parent component gives a child component the _input_ it needs, which is re-sent every time the parent component renders.
-3. A child component can emit _output messages_ to the parent component, notifying it when an important event has occurred.
+1. 父组件可以向子组件发送 _查询（queries）_ ，通知子组件执行某种操作或者获取子组件内部信息。
+2. 父组件可以向子组件传递 _输入（input）_ ，每当父组件重新渲染时都会重新发送。
+3. 子组件可以像父组件发送 _输出消息_ ，通知父组件某种事件发生。
 
-These type parameters are represented in the `Component` type, and some are also found in the `ComponentHTML` and `HalogenM` types. For example, a component that supports queries, input, and output messages will have this `Component` type:
+这些类型参数都在 `Component` 类型中，有些也出现在 `ComponentHTML` 和 `HalogenM` 类型里。例如，一个支持查询、输入和输出消息的组件类型：
 
 ```purs
 component :: forall m. H.Component HH.HTML Query Input Output m
 ```
 
-You can think of the ways a component can communicate with other components as its _public interface_, and the public interface shows up in the `Component` type.
+可以把组件和其他组件交流的方式当作一种 _公开接口_，公共接口会定义在 `Component` 类型
 
-In this chapter we'll learn about:
+在这一章我们会学习：
 
-1. How to render components in your Halogen HTML
-2. The three ways that components communicate: queries, input, and output messages
-3. Component slots, the `slot` function, and the `Slot` type, which make this communication type-safe
+1. 如何在 Halogen HTML 中渲染其他组件
+2. 组件间通信的三种方式：查询、输入和输出消息
+3. 组件插槽， `slot` 函数以及 `Slot` 类型，借助这些类型能够让通信做到类型安全
 
-We'll start by rendering a simple child component that has no queries or output messages. Then, we'll build up components that use these ways to communicate, ending with a final example that shows off a parent and child component using all of these mechanisms at once.
+我们首先渲染一个没有查询和输出消息的子组件。然后，我们会用这三种方式进行通信，构建一个涉及到所有通信方式的父子组件例子。
 
-Try loading the example into Try PureScript to explore each of the communication mechanisms discussed in this chapter!
+将这个例子加载到 [Try Purescript](https://try.purescript.org)，分享一下本章介绍到的每种通信方式。
 
-## Rendering Components
+## 渲染组件
 
-We began this guide by writing functions that returned Halogen HTML elements. These functions could be used by other functions to build even larger trees of HTML elements.
+本章开始，我们首先编写几个渲染 Halogen HTML 元素的函数。这些函数可以被用来构建更大的 HTML 元素树。
 
-When we started using components we began writing `render` functions. Conceptually, components produce Halogen HTML as their result via this function, though they can also maintain internal state and perform effects, among other things.
+编写组件时，我们首先要写的是 `render` 函数。总的来说，组件都是通过这个函数生成 Halogen HTML ，虽然组件自身可以维持内部状态以及执行外部作用等等。
 
-In fact, while we've only been using HTML elements when writing our `render` functions so far, we can also use _components_ as if they were functions that produce HTML. The analogy is imperfect, but it can be a helpful mental model for understanding how to treat components when you are writing your `render` function.
+实际上，虽然我们一直在 `render` 函数中使用 HTML 元素，我们也可以使用 _components_ 生成 HTML。虽然不是特别的贴切，但是这是个很好的理解如何使用组建的概念模型。
 
-When one component renders another, it's called the "parent" component and the component it renders is called the "child" component.
+当一个组件渲染其他组件时，我们称它为父组件，被渲染的组件则称为子组件。
 
-Let's see how we can render a component inside our `render` function, instead of only HTML elements as we've seen so far. We'll start by writing a component that uses a helper function to render a button. Then, we'll turn that helper function into its own component, and we'll adjust the parent component to render this new child component.
+让我们看一下除了 HTML 元素之外，如何在 `render` 函数中渲染组件。首先，我们写一个渲染按钮的辅助函数。然后，我们会把这个辅助函数转化成一个组件，我们也要修改一下父组件去渲染这个子组件。
 
-First, we'll write a component that uses a helper function to render some HTML:
+首先，我们编写一个使用辅助函数渲染 HTML 的组件：
 
 ```purs
 module Main where
@@ -67,9 +67,9 @@ button :: forall w i. { label :: String } -> HH.HTML w i
 button { label } = HH.button [ ] [ HH.text label ]
 ```
 
-This should look familiar. We have a simple component that renders a `div`, and a helper function, `button`, which renders a button given a label as input. As a note, our `parent` component leaves type variables open for our state and actions because it doesn't have an internal state and it doesn't have any actions.
+这段代码看起来应该很熟悉，一个渲染 `div` 的简单组件以及一个辅助函数 `button`，这个辅助函数通过输入参数中的标签渲染一个按钮。注意，组件 `parent` 使用类型参数声明了内部状态和行为类型，因为组件自身并没有内部状态，也没有任何行为。
 
-Now, let's turn our `button` function into a component for demonstration purposes (in a real world app it would be too small for that):
+现在，让我们把 `button` 函数转化成一个组件来做演示（在实际应用中，通常不会针对这么简单的组件这么做）：
 
 ```purs
 type Input = { label :: String }
@@ -91,13 +91,13 @@ button =
   render { label } = HH.button [ ] [ HH.text label ]
 ```
 
-We took a few steps to convert our button HTML function into a button component:
+我们用以下几步把 button 函数转换成了一个组件：
 
-1. We converted the argument to our helper function into the `Input` type for the component. The parent component is responsible for providing this input to our component. We'll learn more about input in the next section.
-2. We moved our HTML into the component's `render` function. The `render` function only has access to our component's `State` type, so in our `initialState` function we copied our input value into our state so we could render it. Copying input into state is a common pattern in Halogen. Also notice that our `render` function leaves the action type unspecified (because we don't have any actions) and indicates we have no child components using `()`.
-3. We used `defaultEval`, unmodified, as our `EvalSpec` because this component doesn't need to respond to events arising internally -- it has no actions and uses no lifecycle events, for example.
+1. 把辅助函数的参数转换成组建的 `Input` 类型。父组件负责提供输入，在后边的小节中会进行介绍输入。
+2. 我们把 HTML 代码移动到了组件的 `render` 函数。 因为 `render` 函数只能访问组件的内部状态 `State` 类型，所以在 `initialState` 函数中，我们要把输入值复制到内部状态中，然后才能在渲染时使用。把输入拷贝到内部状态中是 Halogen 中一个常见的模式，同时要注意，`render` 没有声明具体的行为类型（因为组件没有任何行为）而且因为没有子组件，我们使用了 `()`。
+3. 我们使用了 `defaultEval` 作为 `EvalSpec`，没做修改，因为这个组件并不需要响应任何内部时间 -- 组件没有任何行为，也没有使用任何生命周期函数。
 
-Our parent component is now broken, though! If you've been following along, you'll now see an error:
+但是父组件现在其实是有问题的！如果你照着做，会看到如下错误：
 
 ```purs
 [1/1 TypesDoNotUnify]
@@ -113,13 +113,13 @@ Our parent component is now broken, though! If you've been following along, you'
     Function
 ```
 
-Components can't just be rendered by giving the component its input as a function argument. Even though components produce ordinary Halogen HTML they can also communicate with the parent component; for this reason, components need extra information before they can be rendered like an ordinary element.
+组件是不能和函数一样，给定输入之后直接调用渲染的。因为组件除了生成正常的 HTML 之外，还是可以和父组件通信的。因此，组件需要额外的信息才能像正常的元素一样被渲染。
 
-Conceptually, components occupy a "slot" in your tree of HTML. This slot is a place where the component can produce Halogen HTML until it is removed from the DOM. A component in a slot can be thought of as a dynamic, stateful HTML element. You can freely intermix these dynamic elements with ordinary Halogen HTML elements, but the dynamic elements need more information.
+概念上，组件都会在 HTML 树中占据一个插槽（位置）。插槽是一个组件在被移除前生成 Halogen HTML 的位置。插槽处的组件可以被当作是一个有状态的动态 HTML 元素。我们可以混合使用动态组件和普通的 Halogen HTML 元素，但是动态组件的运行需要更多的信息。
 
-That extra information comes from the `slot` function and the slot type used in `ComponentHTML`, which we've so far been leaving as the empty row, `()`. We'll talk a lot more about rendering components in slots in a moment, but for now let's get things compiling.
+这里更多信息则是来自 `slot` 函数和 `ComponentHTML`中的插槽类型，至今为止，我们一直使用的是 `()`。我们很快就会讨论如何利用插槽渲染组件，不过我们先让代码能编译通过。
 
-We can fix our `render` function by rendering our component in a slot via the `slot` function. We'll also update the slot type in our `ComponentHTML` to include the component our Halogen HTML now must support. This diff demonstrates the differences between rendering an HTML element and rendering a component:
+我们可以通过使用 `slot` 函数，在指定插槽内渲染组件来解决 `render` 函数的编译问题。当然，我们需要更新 `ComponentHTML` 中的插槽类型来包含我们支持的组件。下面的更改记录真是了渲染 HTML 元素和渲染组件的区别。
 
 ```diff
 + import Data.Symbol (SProxy(..))
@@ -143,50 +143,50 @@ We can fix our `render` function by rendering our component in a slot via the `s
 +     HH.div_ [ HH.slot _button 0 button { label: "Click Me" } absurd ]
 ```
 
-Our parent component is now rendering a child component -- our button component. Rendering a component introduced two big changes:
+现在父组件可以渲染子组件 -- 按钮组件。渲染一个子组件有两个大的改动：
 
-1. We used the `slot` function to render the component, which takes several arguments we haven't explored yet. Two of those arguments are the `button` component itself and the label it needs as input.
-2. We added a new type called `Slots`, which is a row containing a label for our button component with a value of type `H.Slot`, and we used this new type in our `ComponentHTML` instead of the previous empty row `()` we've seen so far.
+1. 使用 `slot` 函数渲染组件，这个函数接受一些参数，有些我们还没有接触到。其中两个参数，一个是 `button` 组件，一个是需要的输入标签。
+2. 添加了新类型 `Slots`，这个新类型包含了一个标签 `button`，其值为类型 `H.Slot`。我们在 `ComponentHTML` 使用了这个新类型，而不是我们之前一直看到的 `()`。
 
-The `slot` function and `Slot` type let you render a stateful, effectful child component in your Halogen HTML as if it were any other HTML element. But why are there so many arguments and types involved in doing this? Why can't we just call `button` with its input?
+`slot` 函数和 `Slot` 类型可以用来渲染一个有状态、可执行外部副作用的子组件，就和渲染其他 HTML 元素一样。但是，为什么需要这么多参数和类型呢？为什么我们不能直接用对应的输入调用 `button` 函数呢？
 
-The answer is that Halogen provides two ways for a parent and child component to communicate with one another, and we need to ensure that this communication is type-safe. The `slot` function allows us to:
+原因是 Halogen 提供了两种父子组件间通信的方式，我们需要保证通信方式的类型安全。`slot` 函数让我们可以：
 
-1. Decide how to identify a particular component by a label (the type-level string "button", which we represent at the term level with the symbol proxy `SProxy :: SProxy "button"`) and a unique identifier (the integer `0`, in this case) so that we can send it _queries_.
-2. Render the component (`button`) and give it its _input_ (`{ label: "Click Me" }`), which will be re-sent every time the parent component renders in case the input changes over time.
-3. Decide how to handle _output messages_ from the child component (here, `absurd`, which is used when a child component doesn't have any output).
+1. 确定如何通过标签（类型层面的字符串 "button"，在值层面，我们使用了 `SProxy :: SProxy "button"` 来表示）和一个唯一的标识符（数字 0）来标识特定的组件，我们就可以向组件发送 _查询_ 。
+2. 渲染组件（`button`），提供组件所需的 _输入_ （`{ label: "Click Me" }`），每次父组件重新渲染时，输入会被重新发送到子组件以防输入随着时间产生改变。
+3. 决定如何处理子组件的 _输出消息_ （这里是 `absurd` ，用在子组件没有任何输出的时候）。
 
-The `slot` function and the `H.Slot` type let us manage these three communication mechanisms in a type-safe way. In the rest of this chapter we'll focus on how parent and child components communicate with one another, and along the way we'll explore slots and slot types.
+借助 `slot` 函数和 `H.Slot` 类型，我们可以用类型安全的方式管理三种通信机制。在本章剩余部分，我们会专注在父子组件如何通信，同时我们会学习插槽以及相关的类型。
 
-## Communicating Among Components
+## 组件间通信
 
-When you move from using one component to using many components you'll soon need some way for them to communicate with one another. In Halogen there are three ways that a parent and child component can communicate directly:
+当从使用单个组件转到使用多个组件时，你很快就需要某种方式来实现组件间通信。在 Halogen 中，有三种父子组件间通信的方式：
 
-1. The parent component can provide input to the child component. Each time the parent component renders it will send the input again, and then it's up to the child component to decide what to do with the new input.
-2. The child component can emit output messages to the parent, similar to how we've been using event sources so far. The child component can notify the parent component when an important event has happened, like a modal closing or a form being submitted, and then the parent can decide what to do.
-3. The parent component can query the child component, either by telling it to do something or by requesting some information from it. The parent component can decide when it needs the child component to do something or give it some information, and then it's up to the child component to handle the query.
+1. 父组件可以为子组件提供输入。每当父组件渲染时，父组件会向子组件发送输入，由子组件决定如何处理新输入。
+2. 子组件可以向父组件发送消息，类似于我们介绍过的事件源。在重要事件发生时，子组件可以通过发送消息来改变父组件状态，例如一个弹出框被关闭或者表单提交之后，父组件可以决定如何处理。
+3. 父组件可以查询子组件，可以告诉子组件执行某些操作，也可以查询子组件的某些内部信息。父组件决定了是那种查询请求，而子组件决定如何处理这些查询请求。
 
-These three mechanisms give you several ways to communicate between components. Let's briefly explore these three mechanisms, and then we'll see how the `slot` function and the slot type you define for your component help you use them in a type-safe way.
+这三种机制提供了组件间通信的多种方式。我们首先来看一下这三种机制，然后我们看一下 `slot` 函数和插槽类型，看一下这些是如何做到类型安全的。
 
-### Input
+### 输入
 
-Parent components can provide input to child components, which is sent on every render. We've seen this several times already -- the `input` type is used to produce the child component's initial state. In the example which introduced this chapter our button component received its label from the parent component.
+父组件可以给子组件提供输入，而且每次渲染时都会重新发送输入。我们已经看过了很多次 -- `input` 类型用于生成子组件内部状态。在本章的那个例子里，按钮组件就是从父组件获得了文本标签。
 
-So far we've only used input to produce our initial state. But input doesn't stop once the initial state has been created. The input is sent again on every render, and the child component can handle the new input via the `receive` function in its eval spec.
+到现在为止，我们只使用输入生成初始状态。但是输入并不是一次性的，在每次渲染的时候都会收到新的输入，子组件可以用通过 `receive` 函数来决定如何处理新的收入。
 
 ```purs
 receive :: input -> Maybe action
 ```
 
-The `receive` function in the eval spec should remind you of `initialize` and `finalize`, which let you choose an action to evaluate when the component is created and destroyed. In the same way, the `receive` function lets you choose an action to evaluate when the parent component sends new input.
+`receive` 函数应该会让你联想到 `initialize` 和 `finalize` 函数，这两个函数可以用来在组件创建和销毁时执行某个行为。同样的， `receive` 函数可以指定在父组件发送输入时应该执行何种行为。
 
-By default Halogen's `defaultSpec` doesn't provide an action to be evaluated when new input is received. If your child component doesn't need to do anything after it receives its initial value then you can leave this as-is. For example, once our button received its label and copied it into state there was no need to continue listening to the input in case it changed over time.
+默认状态下，Halogen 的 `defaultSpec` 并没有提供收到新输入时应该执行的行为。如果你的子组件不希望在收到初始输入后做任何事，你可以不用做任何改动。例如，按钮收到文本标签并复制到状态后，没有任何必要监听输入的变化。
 
-The ability to receive new input every time the parent renders is a powerful feature. It means parent components can declaratively provide values to child components. There are other ways for a parent component to communicate with a child component, but the declarative nature of input makes it the best choice in most circumstances.
+父组件渲染时，子组件能收到新的输入是一个很有用的特性。这意味着我们可以声明式给子组件提供输入。虽然父组件可以通过其他方式和子组件通信，但是声明式输入在多数情况下都是最优的选择。
 
-Let's make this concrete by revisiting our example from the introduction. In this version our button is unchanged -- it receives its label as input and uses it to set its initial state -- but our parent component has changed. Our parent component now starts a timer when it initializes, increments a count every second, and uses the count in state as the label for the button.
+我们重新看一下我们的例子，更具体的看一下这个问题。在这个版本，按钮组件没有任何变化 -- 它接受一个文本作为输入然后用这个文本初始化内部状态 -- 但是父组件需要做些改动。父组件在初始化时启动一个定时器，每秒增加一个计数值，然后使用这个计数值作为按钮的文本标签。
 
-In short, our button's input will be re-sent every second. Try pasting this into [Try PureScript](https://try.purescript.org) to see what happens -- does our button's label update every second?
+简单说，按钮的输入每秒钟都会被重新发送。复制这个例子到 [Try PureScript](https://try.purescript.org) ，看一下发生了什么 -- 按钮的文本标签按时不是会每秒钟更新一次？
 
 ```purs
 module Main where
@@ -273,9 +273,9 @@ button =
   render { label } = HH.button_ [ HH.text label ]
 ```
 
-If you load this into Try PureScript you'll see that our button...never changes! Even though the parent component is sending it new input every second (every time the parent re-renders) our child component is never receiving it. It's not enough to accept input; we also need to explicitly decide what to do each time it is received.
+如果把这段代码加载到 Try PureScript，你会发现我们的按钮。。。没有任何变化！虽然父组件每次都重新发送了输入（每次父组件渲染时），但是子组件从来没有收到过。只是收到输入是不够的，我们还要指定每次收到新输入是应该执行何种操作。
 
-Try replacing the button code with this revised code to see the difference:
+将按钮组件的代码替换为如下内容，看看差别是什么：
 
 ```purs
 data ButtonAction = Receive ButtonInput
@@ -308,24 +308,25 @@ button =
       H.modify_ _ { label = input.label }
 ```
 
-We made several changes in the new version to ensure we stayed up-to-date with input from the parent component:
+为了保证能和父组件的最新输入同步，我们做了一些操作：
 
-1. We added a new action, `Receive`, a constructor that accepts the `Input` type as its argument. We then handled this action in our `handleAction` function by updating our state when new input is received.
-2. We added a new field to our eval spec, `receive`, which holds a function that will be called every time new input is received. Our function returns our `Receive` action so it can be evaluated.
+1. 添加了一个新的行为 `Receive`，接受 `Input` 类型值作为参数。 我们在 `handleAction` 函数中处理这个行为时会更新内部状态。
+   function by updating our state when new input is received.
+2. 我们在求值规范里添加了一个新的字段 `receive`，这个字段是一个函数，每次有新输入时都会调用这个函数。这个函数返回了 `Receive` 行为，我们会在 `handleAction` 中处理。
 
-This change is sufficient to subscribe our child component to new input from the parent component. You should now see that our button's label updates every second. As an exercise, you can replace our `receive` function with `const Nothing` to see the how the input is ignored once again.
+这些改动能让子组件订阅到父组件的新输入。现在，按钮应该就会每秒钟更新一次了。作为一个练习，你可以把 `receive` 函数替换为 `const Nothing`，这是按钮组件又会忽略新的输入了。（因为没有返回任何行为，handleAction 也就不会被调用更新内部状态）
 
-### Output Messages
+### 输出消息
 
-Sometimes an event happens in a child component that it shouldn't handle itself.
+有时，有些事件发生后不应该由子组件处理。
 
-For example, let's say we're writing a modal component, and we need to evaluate some code when a user clicks to close the modal. To keep this modal flexible we'd like for the parent component to decide what should happen when the modal is closed.
+例如，我们写了一个弹窗组件，当用户点击关闭按钮时，我们需要执行一些行为。为了更加灵活，我们希望让父组件决定窗口关闭时应该做什么。
 
-In Halogen we'd handle this situation by designing the modal (the child component) to raise an **output message** to the parent component. The parent component can then handle the message like any other action in its `handleAction` function. Conceptually, it's as though the child component is an event source the that the parent component automatically subscribes to.
+在 Halogen 里，为了处理这种情况，我们选择让弹窗组件（子组件）向父组件触发一个 **输出消息** 。父组件可以像处理其他行为一样，在 `handleAction` 函数里处理这些消息。概念上，子组件就像是一个事件源，而且父组件还会自动订阅。
 
-Concretely, our modal could raise a `Closed` output to the parent component. The parent could then change its state to indicate the modal should no longer display, and on the next render the modal is removed from the DOM.
+具体点说，弹窗组件可以向父组件触发 `Closed` 事件。父组件可以更新内部状态，标识弹窗不应该被展示了，下次渲染周期时，弹窗就会从 DOM 中被移除。
 
-As a tiny example, let's consider how we'd design a button that lets the parent component decide what to do when it is clicked:
+作为简单例子，我们考虑如何设计一个按钮，这个按钮在点击时 hi 让父组件决定要执行的操作。
 
 ```purs
 -- This component can notify parent components of one event, `Clicked`
@@ -358,19 +359,19 @@ button =
       H.raise Clicked
 ```
 
-We took a few steps to implement this output message.
+我们用了一下几步实现输出消息。
 
-1. We added an `Output` type which describes what output messages our component can emit. We used the type in our `Component` type because it's part of the component's public interface and our `HalogenM` type because this is where we can actually emit the output message.
-1. We added an `Action` type with a `Click` constructor to handle the click event in our Halogen HTML
-2. We handled the `Click` action in our `handleAction` by *raising* an output message to the parent component. You can emit output messages with the `H.raise` function.
+1. 添加了 `Output` 类型，描述组件可能触发的消息。因为这个类型算是组建的公共接口的一部分，所以在 `Component` 类型里使用了这个类型。同时，因为输出消息是在 `HalogenM` 类型中触发的，所以也许包含这个类型。
+2. 添加了 `Action` 类型以及 `Click` 构造函数，用于处理 Halogen HTML 中的点击事件。
+3. 在 `handleAction` 中处理 `Click` 行为时，我们 _触发_ 了一个输出消息。触发消息可以使用 `H.raise` 函数。
 
-We now know how a component can emit output messages. Now, let's see how to handle output messages from a child component. There are three things to keep in mind:
+我们已经知道了组件如何触发消息，现在，让我们看一下如何处理子组件触发的消息。有三件事需要记住：
 
-1. When you render a child component you will need to add it to your slots type, which is then used in your `ComponentHTML` and `HalogenM` types. The type you add will include the child component's output message type, which allows the compiler to verify your handler.
-2. When you render a child component with the `slot` function you can provide an action that should be evaluated when new output arises. This is similar to how lifecycle functions like `initialize` accept an action to evaluate when the component initializes.
-3. Then, you'll need to add a case to your `handleAction` for the action you added to handle the child component's output.
+1. 但渲染子组件时，需要把组件相关类型添加到插槽类型中，`ComponentHTML` 和 `HalogenM` 类型会用到这个插槽类型。添加的类型里就包含组建的输出消息类型，编译器会利用整个类型信息来校验消息处理函数。
+2. 当用 `slot` 函数渲染子组件时，要提供一个当有输出消息时需要执行的行为。这和 `initialize` 函数类似，可以在组件初始化时执行一个行为。
+3. 最后，在 `handleAction` 需要添加一个新的分支，用来处理对应于子组件输出的新行为。
 
-Let's start writing our parent component by writing a slot type:
+我们首先编写父组件的插槽类型：
 
 ```purs
 module Parent where
@@ -384,25 +385,25 @@ type Slots = ( button :: forall query. H.Slot query Button.Output Int )
 _button = SProxy :: SProxy "button"
 ```
 
-Our slot type is a row, where each label designates a particular _type_ of child component we support, in each case using the type `H.Slot`:
+插槽类型是一个行类型，每一个标签代表了我们支持的某个特定类型的子组件，使用类型 `H.Slot` 定义：
 
 ```purs
 H.Slot query output id
 ```
 
-This type records the queries that can be sent to this type of component, the output messages that we can handle from the component, and a type we can use to uniquely identify an individual component.
+这个类型（Slots）包含了此组件可以接受的查询类型、父组件需要处理的输出消息以及可以唯一标识单个组件的类型。
 
-Consider, for example, that we could render 10 of these button components -- how would you know which one to send a query to? That's where the slot id comes into play. We'll learn more about that when we discuss queries.
+假设我们需要渲染 10 个按钮组件 -- 如何知道应该向哪个组件发送查询请求？这是插槽的 id 就发挥作用了。讨论查询时我们会讲解这个。
 
-Our parent component's row type makes it clear that we can support one type of child component, which we can reference with the symbol `button` and an identifier of type `Int`. We can't send queries to this component because the type variable was left open. But it can send us outputs of type `Button.Output`.
+父组件的插槽行类型说明只支持一种子组件类型，我们可以用符号 `button` 和 `Int` 型变量来唯一索引子组件。我们不能向子组件发送查询请求，因为类型参数（query）是开放的，但是子组件可以触发类型为 `Button.Output` 的输出消息。
 
-Next, we need to provide an action for handling these outputs:
+接下来，我们要定义一个行为来处理这种输出：
 
 ```purs
 data Action = HandleButton Button.Output
 ```
 
-When this action occurs in our component, we can unwrap it to get the `Button.Output` value and use that to decide what code to evaluate. Now that we have our slot and action types handled, let's write our parent component:
+处理这种行为时，我们可以从其中获得 `Button.Output` 类型的值，根据这个值来确定来确定操作。我们已经定义好了插槽以及行为类型，现在开始编写父组件：
 
 ```purs
 parent :: forall query input output m. H.Component HH.HTML query input output m
@@ -426,24 +427,24 @@ parent =
           ...
 ```
 
-You'll notice that our `Slots` type has now been used in both the `ComponentHTML` type and the `HalogenM` type. Also, this component is now notified any time the `Button.Clicked` event happens in the child component, which lets the parent component evaluate whatever code it wants in response.
+可以注意到，在 `ComponentHTML` 和 `HalogenM` 类型中都使用了 `Slots` 这个类型。每当子组件中 `Button.Clicked` 事件触发时，父组件都会得到通知，并决定如何响应这个事件。
 
-And that's it! You now know how to raise output messages from a child component to a parent component and how to then handle those messages in the parent component. This is the primary way a child component can communicate with a parent component. Now let's see how a parent component can send information to a child component.
+好的，你已经知道如何从子组件向父组件发送输出消息以及父组件如何处理这些消息。这是子组件向父组件通信的最主要方式。接下来，我们来看一下父组件如何向子组件发送消息。
 
-### Queries
+### 查询
 
-Queries represent commands or requests that a parent component can send to a child component. They're similar to actions and are handled with a `handleQuery` function similar to the `handleAction` function. But they arise from _outside_ the component, instead of internally within the component as actions are, which means they are part of the public interface of a component.
+查询是父组件向子组件发送的命令或者请求。查询和行为类似，行为可以用函数 `handleAction` 函数处理，查询则是使用函数 `handleQuery` 函数处理。区别在于，查询是由组件外部出发的，而行为是组件内部触发的，所以查询会包含在组建的公共接口里。
 
-Queries are most useful when a parent component needs to control when an event occurs instead of a child component. For example:
+查询多应用在父组件想要控制事件触发而不是子组件来控制的场景。例如：
 
-* A parent component can _tell_ a form to submit, rather than wait for a user to click a submit button.
-* A parent component can _request_ the current selections from an autocomplete, rather than wait for an output message from the child component when a selection is made.
+- 父组件想要 _控制_ 表单的提交，而不是等待用户点击提交按钮。
+- 父组件想要 _查询_ 一个自动填充表单的选定内容，而不是等待子组件在用户选定内容时触发输出消息。
 
-Queries are a way for parent components to imperatively control a child component. As introduced in our two examples, there are two common styles of query: a tell-style query for when a parent component commands a child component to do something, and a request-style query for when a parent component wants information from a child component.
+查询是父组件用命令式控制子组件的方式。我们之前介绍过，查询分为两种：告知方式，当父组件要求子组件执行某种操作时，另外一种是请求方式，用于父组件想要从子组件查询信息时。
 
-The parent component can send a query, but the child component defines the query and also handles the query. That makes queries similar conceptually to actions: just like how you define an `Action` type and handle actions for your component with `handleAction`, you define a `Query` type and a `handleQuery` function for queries.
+父组件发送查询，但是是子组件负责定义和处理查询。这一点和行为类似：实现行为时，我们首先定义了 `Action` 类型以及处理函数 `handleAction`，对于查询，我们需要定义 `Query` 类型和查询处理函数 `handleQuery` 。
 
-Here's a brief example of a query type that includes a tell-style and request-style query:
+下面是一个查询类型的例子，包含了告知方式和请求方式。
 
 ```purs
 data Query a
@@ -451,9 +452,9 @@ data Query a
   | Request (Boolean -> a)
 ```
 
-We can interpret this query as meaning "A parent component can tell this component to do something with `Tell` and it can request a `Boolean` from this component with `Request`." When you implement a query type, remember that the `a` type parameter should be present in every constructor. It should be the final argument for tell-style queries and be the result of a function type for request-style queries.
+我们可以这样理解查询：父组件可以通过 `Tell` 告知子组件执行某种操作，也可以通过发送 `Reqeust` 来请求一个 `Boolean` 型的值。首先查询类型时，需要注意的是类型参数 `a` 需要出现在每一个构造函数中。对于告知式查询，这个类型参数应该是最后一个类型参数，对于请求方式查询，这个类型参数应该是函数返回值类型。
 
-Queries are handled with a `handleQuery` function in your eval spec, just like how actions are handled with a `handleAction` function. Let's write a `handleQuery` function for our custom data type, assuming some state, action, and output types have already been defined:
+查询是通过 `handleQuery` 函数处理的，和行为需要通过 `handleAction` 函数处理一样。我们假设状态、行为、输出消息类型已经定义好了，让我们来实现 `handleQuery` 函数：
 
 ```purs
 handleQuery :: forall a m. Query a -> H.HalogenM State Action () Output m (Maybe a)
@@ -468,13 +469,13 @@ handleQuery = case _ of
     pure (Just (reply true))
 ```
 
-The `handleQuery` function takes a query of type `Query a` and produces some `HalogenM` code that returns `Maybe a`. This is why each constructor of our query type needs to contain an `a`: we need to return it in `handleQuery`.
+`handleQuery` 的参数类型是 `Query a` ，返回值是 `HalogenM` 类型值，针对这个值进行求值返回结果为 `Maybe a`。这就是为什么我们的每个构造函数都需要包含类型参数 `a`：我们需要在 `handleQuery` 中返回这个值。
 
-When we receive a tell-style query we can just wrap the `a` we received in `Just` to return it, as we did to handle the `Tell a` case in `handleQuery`.
+当我们收到告知类型的查询时，我们可以直接用 `Just` 包裹 `a` ，然后返回即可，就是我们在上面 `handleQuery` 代码里如何处理 `Tell a` 的。
 
-When we receive a request-style query, though, we have to do a little more work. Instead of receiving an `a` value we can return, we receive a function that will give us an `a` that we can then return. For example, in our `Request (Boolean -> a)` case, we receive a function that will give us an `a` when we apply it to a `Boolean`. By convention this function is called `reply` when you pattern match on a request-style query. In `handleQuery` we gave this function `true` to get an `a`, then wrapped the `a` in `Just` to return it.
+不过如果是请求方式的查询，我们需要多做一点工作。这种情况下我们不会收到一个 `a` 类型的值，而是会收到一个函数，调用这个函数时能得到一个 `a` 类型的值。例如，在处理 `Request (Boolean -> a)` 时，我们收到一个返回类型为 `a`，参数值为 `Boolean` 的函数。通常来说，当作模式匹配时，这个函数会命名为 `reply` 。在 `handleQuery` 函数，我们用 `true` 做参数调用这个函数获得一个 `a` 类型的值，然后使用 `Just` 包裹后返回。
 
-Request-style queries may look strange at first. But the style allows our query type to return _many_ types of values instead of only one type of value. Here are a few different request types that return different things:
+请求方式的查询看起来很奇怪，但是这种方式，可以允许我们返回多种类型的值。下面是一些不同的查询，返回的是不同的值：
 
 ```purs
 data Requests a
@@ -484,9 +485,9 @@ data Requests a
   | ...
 ```
 
-A parent component can use `GetInt` to retrieve an `Int` from our component, `GetString` to retrieve a `String` from our component, and so on. You can consider `a` the type returned by the query type, and request-style queries a way to let `a` be many different possible types. In a moment we'll see how to do this from a parent component.
+父组件可以使用 `GetInt` 获得一个 `Int` 类型的值，可以使用 `GetString` 获得一个 `String` 类型的值，等等。可以把类型 `a` 当作查询的返回类型，而请求类型的插叙能提供了一种方式，可以让 `a` 支持多种不同的类型。稍后，我们将在父组件中讲解如何做到这一点。
 
-Let's see another tiny example that demonstrates how to define and handle queries in a component.
+让我们来看另一个例子，看一下在组件中如何定义和处理查询。
 
 ```purs
 -- This component can be told to increment or can answer requests for
@@ -524,12 +525,12 @@ counter =
       pure (Just (reply count))
 ```
 
-In this example we've defined a counter that lets the parent _tell_ it to increment or _request_ its current count. To do this, we:
+在这个例子里，我们定义了一个计数器，父组件可以 _告知_ 组件加 1，也可以 _请求_ 当前的计数值。为支持这一点，我们需要：
 
-1. Implemented a query type that includes a tell-style query, `Increment a`, and a request-style query, `GetCount (Int -> a)`. We added this query type to our component's public interface, `Component`.
-2. Implemented a query handler, `handleQuery`, that runs code when these queries arise. We'll add this to our `eval`.
+1. 实现一个查询类型，类型包含一个告知行查询 `Increment a` 以及一个请求式查询 `GetCount (Int -> a)`。我们把这个类型添加到组件类型的公共接口中。
+2. 实现查询处理函数 `handleQuery` ，当接收到查询时，该函数会被执行，这个函数下会被添加到 `eval` 中。
 
-We now know how to define queries and evaluate them in a child component. Now, let's see how to _send_ a query to a child component from a parent component. As usual, we can start by defining our parent component's slot type:
+现在我们知道如何在子组件里定义和处理查询。现在，让我看一下如何向子组件 _发送_ 查询。首先，我们要先定义插槽类型：
 
 ```purs
 module Parent where
@@ -539,15 +540,15 @@ type Slots = ( counter :: H.Slot Counter.Query Void Int )
 _counter = SProxy :: SProxy "counter"
 ```
 
-Our slot type records the counter component with its query type and leaves its output message type as `Void` to indicate there are none.
+插槽类型包含了计数器组件的查询类型，输出消息类型定义为 `Void`，表明没有输出类型。
 
-When our parent component initializes, we'll fetch the count from the child component, then increment it, and then get the count again so we can see that it has increased. To do that, we'll need an action to run on initialize:
+当父组件初始化时，我们从子组件获取计数值，然后执行加一操作，然后会再次获取计数值，确定数值确实已经加一了。为了这点，我们需要定义一个初始化时执行的行为：
 
 ```purs
 data Action = Initialize
 ```
 
-Now, we can move on to our component definition.
+接着，我们可以转到组件的定义。
 
 ```purs
 parent :: forall query input output m. H.Component HH.HTML query input output m
@@ -580,23 +581,23 @@ parent =
         -- ... do something
 ```
 
-There are several things to notice here.
+有几件事需要注意。
 
-1. We used the symbol proxy for the counter's label in the slot type, `_counter`, along with its identifier, `unit`, both to render the component with the `slot` function and also to send queries to the component with the `query` function. The label and identifier are always used to work with a particular child component.
-2. We used the `H.query` function with the component's label and identifier to send it a query. We used the `H.tell` function to send the tell-style query `Increment`, and we used the `H.request` function to send the request-style query `GetCount`. The `GetCount` query had a reply function of type `(Int -> a)`, so you'll notice that when we used it we received a `Maybe Int` in return.
+1. 在插槽类型里，对于计数器组建的标签，我们使用了类型代理 `_counter` 和标识符 `unit`，这个标签会用在 `slot` 函数渲染组件以及使用 `query` 函数向子组件发送查询的时候。和特定组件交互式，会一直使用标签和标识符。
+2. 以组件标签和标识符调用函数 `H.query` 来向特定组件发送查询。使用 `H.tell` 函数发送告知是查询 `Increment`，使用 `H.request` 函数发送请求类查询 `GetCount`。`GetCount` 有一个应答函数，类型是 `(Int -> a)`，注意，我们会得到一个类型为 `Maybe Int` 的返回值。
 
-The `query` function takes a label, a slot identifier, and a query to send. It returns the response wrapped in a `Maybe`, where `Nothing` signifies that the query failed (either the child component returned `Nothing`, or no component exists at the label and slot identifier you provided). There is also a `queryAll` function that sends the same query to _all_ components at a given label.
+`query` 函数的参数是标签、插槽标识符以及一个要发送的查询。这个函数使用 `Maybe` 包裹返回然后返回，`Nothing` 表明查询失败（要么是因为子组件返回了 `Nothing`，要么是根据提供的标签和标识符找不到对应的子组件）。还以一个函数 `queryAll` 可以用来向所有子组件发送同一个查询。
 
-The `query` function wants to take a fully-applied query to send to the child component. The `tell` and `request` functions are conveniences for creating tell-style and request-style queries, but you don't strictly need to use them. We could also have written:
+`query` 函数接受一个完全应用的查询作为参数。而 `tell` 和 `request` 函数在创建告知式和请求式的查询时特别方便，我们不是一定要使用这两个函数，我们也可以写：
 
 ```purs
 startCount <- H.query _counter unit $ Counter.GetCount (identity :: Int -> Int)
 _ <- H.query _counter unit $ Counter.Increment unit
 ```
 
-The `Counter.GetCount` constructor takes a function of type `(Int -> a)`, where `a` can be anything, so we can supply the `identity` function to mean "Return the `Int` that you received." The `Counter.Increment` constructor takes a value of type `a`, where `a` can be anything; since we just get the value we provided back, we don't care about it, and so by convention tell-style queries supply `unit` for `a`.
+`Counter.GetCount` 构造函数接受的函数类型是 `(Int -> a)`，`a` 可以是任意类型。所以我们可以直接使用 `identity` 函数来返回接受到的`Int` 类型值。`Counter.Increment` 构造函数接受类型为`a`的参数， `a` 可以是任意类型。由于我们只是返回我们接受的数据，告知式擦汗寻可以直接使用 `unit` 。
 
-In almost all cases we supply `identity` to request-style queries and `unit` to tell-style queries, so the `tell` and `request` functions help hide away the implementation by doing this for us.
+在几乎所有情况下，对于请求式查询，我们使用 `identity` 函数，对于告知式查询，则使用 `unit` ，因此 `tell` 和 `request` 函数帮助我们隐藏了实现细节。
 
 ```purs
 type Tell f = Unit -> f Unit
@@ -610,33 +611,33 @@ request :: forall f a. Request f a -> f a
 request query = query identity
 ```
 
-Many people find queries to be the most confusing part of the Halogen library. Luckily, queries aren't used nearly so much as the other Halogen features we've learned about in this guide, and if you get stuck you can always return to this section of the guide as a reference.
+很多人都会觉得查询令人困惑，幸好查询在实践中应用并不多，如果还有困惑，可以反复阅读这一章。
 
-## Component Slots
+## 组件插槽
 
-We've learned a lot about how components communicate with one another. Before we move on to our final example let's recap what we've learned about slots along the way.
+我们已经学习了很多有关组件通信的知识，在我们进入最终例子之前，我们来回顾一下有关插槽的知识。
 
-A component needs to know what types of child component its supports so that it's able to communicate with them. It needs to know what queries it can send to them and what output messages it can receive from them. It also needs to know how to identify which particular component to send a query to.
+一个组件需要知道自己支持的子组件以便能够与之进行通信。它需要知道子组件支持的查询以及可能出发的输出消息。当然，它就要知道如何能够标识他想要发送查询到哪一个组件。
 
-The `H.Slot` type captures the queries, outputs, and unique identifier for a particular type of child component the parent component can support. You can combine many slots together into a _row_ of slots, where each label is used for a particular type of component. Here's how you could read the type definitions for a few different slots:
+`H.Slot` 类型包含了子组件支持的查询、输出以及唯一性标识。我们可以把多个插槽组合到一个 _行_ 类型，其中行类型的每一个标签都为一次的标识了一种类型的组件。下面的内容演示了如何越多不同类型的插槽：
 
 ```purs
 type Slots = ()
 ```
 
-This means the component supports no child components.
+这个类型表明组件不支持子组件。
 
 ```purs
 type Slots = ( button :: forall query. H.Slot query Void Unit )
 ```
 
-This means the component supports one type of child component, identified by the symbol `button`. You can't send queries to it (because `q` is an open type variable) and it doesn't emit any output messages (usually represented with `Void` so you can use `absurd` as the handler). You can have at most one of this component because only one value, `unit`, inhabits the `Unit` type.
+这个类型表明组件只支持一种类型的子组件，组件靠符号 `button` 标识。而且，不能向子组件发送查询（因为 `q` 是个开放的类型参数），子组件不会触发输出消息（通常使用 `Void` 表示，处理函数可以使用 `absurd` ）。你只有有一个这种类型的子组件，因为只有值 `unit` 属于类型 `Unit` 。
 
 ```purs
 type Slots = ( button :: forall query. H.Slot query Button.Output Int )
 ```
 
-This type is quite similar to previous one. The difference is that the child component can raise output messages of type `Button.Output`, and you can have as many of this component as there are integers.
+这个类型和上个类型相同，区别是子组件可以触发输出消息 `Button.Output`，而且可以由多个这种类型的子组件，因为标识符式 `Int` 。
 
 ```purs
 type Slots =
@@ -645,11 +646,11 @@ type Slots =
   )
 ```
 
-This slot type means the component supports two types of child component, identified by the labels `button` and `modal`. You can send queries of type `Button.Query` to the button component, and you won't receive any output messages from it. You can send queries of type `Modal.Query` to and receive messages of type `Modal.Output` from the modal component. You can have as many of the button component as there are integers, but at most one modal component.
+这个插槽类型表明，组件支持两种类型的子组件，分别使用标签 `button` 和 `modal` 标识。父组件可以向按钮子组件发送 `Button.Query` 类型的查询，并且不会收到此种组件发送的输出消息。对于弹窗组件，可发送的查询类型是 `Modal.Query` ，同时会收到的消息类型是 `Modal.Output` 。子组件可以包含多个按钮子组件，但是只能最多有一个弹窗子组件。
 
-A common pattern in Halogen apps is for a component to export its own slot type, because it already knows its query and messages types, without exporting the type that identifies this particular component because that's the parent's responsibility.
+常见的模式是组件导出自己的插槽类型，因为组件自身是知道自己支持的查询和消息类型，但是并不导出表示本组件的标识符类型，因为这点应该是父组件来决定的。
 
-For example, if the button and modal component modules exported their own slot types, like this:
+例如，按钮和弹窗组件可以像这样导出他们的插槽类型：
 
 ```purs
 module Button where
@@ -661,7 +662,7 @@ module Modal where
 type Slot id = H.Slot Query Output id
 ```
 
-Then our last slot type example would become this simpler type:
+我们最后一个插槽类型就会变为：
 
 ```purs
 type Slots =
@@ -670,13 +671,13 @@ type Slots =
   )
 ```
 
-This has the advantage of being more concise and easier to keep up-to-date over time, as if there are changes to the slot type they can happen in the source module instead of everywhere the slot type is used.
+这样写，代码会更简介，而且更容易在之后的修改中能保持一致性，因为如果插槽类型改变，我们只需修改插槽类型的来源模块，不需要修改使用的地方。
 
-## Full Example
+## 完整示例
 
-To wrap up, we've written an example of a parent and child component using all the communication mechanisms we've discussed in this chapter. The example is annotated with how we'd interpret the most important lines of code -- what we'd glean by skimming through these component definitions in our own codebases.
+总结一下，我们编写了这个父子组件通信的例子，涉及了本章讨论的三种通信方式。这个例子里重要的代码片段都包含了注释。
 
-As usual, we suggest pasting this code into [Try PureScript](https://try.purescript.org) so you can explore it interactively.
+同样，建议你把代码复制到 [Try PureScript](https://try.purescript.org) ，可以交互式的学些这个例子。
 
 ```purs
 module Main where
@@ -854,4 +855,4 @@ button =
       pure (Just (reply enabled))
 ```
 
-In the next chapter we'll learn more about running Halogen applications.
+在下一章我们会学习如何运行 Halogen 应用。

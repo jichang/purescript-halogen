@@ -25,7 +25,7 @@ component :: forall query input output m. H.Component query input output m
 component = ...
 ```
 
-`main`函数中最重要的就是 `runUI` 这个函数。Provide `runUI` with your root component, the root component's input value, and a reference to a DOM element, and it will provide your application to the Halogen virtual DOM. The virtual DOM will then render your application at that element and maintain it there for as long as your app is running.
+`main`函数中最重要的就是 `runUI` 这个函数。调用 `runUI` 时，提供根组件、根组件输入以及一个 DOM 元素的引用，这函数 with your root component, the root component's input value, and a reference to a DOM element, and it will provide your application to the Halogen virtual DOM. The virtual DOM will then render your application at that element and maintain it there for as long as your app is running.
 
 ```purs
 runUI
