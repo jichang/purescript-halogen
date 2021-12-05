@@ -1,58 +1,25 @@
-# Halogen [![Latest release](http://img.shields.io/github/release/purescript-halogen/purescript-halogen.svg)](https://github.com/purescript-halogen/purescript-halogen/releases) [![halogen in package-sets](https://img.shields.io/endpoint.svg?url=https://package-sets-badge-0lf69kxs4fbd.runkit.sh/halogen)](https://github.com/purescript/package-sets) [![Build status](https://travis-ci.com/purescript-halogen/purescript-halogen.svg?branch=master)](https://travis-ci.com/purescript-halogen/purescript-halogen)
+# Halogen 文档
 
-Halogen is a type-safe library for building user interfaces in PureScript.
+Halogen 是一个类型安全的声明式 UI 组件库。
 
-* **Declarative**
-  Write simple views for each state in your application, and Halogen will efficiently and intelligently update the right components and re-render your user interface.
-* **Component Architecture**
-  Write encapsulated components which manage their own state, and compose them together to build complex user interfaces. Or, use a single component to implement an Elm-like architecture.
-* **Entirely PureScript**
-  Halogen and its virtual DOM implementation are written in PureScript. Halogen's performance and bundle sizes are roughly equivalent to popular JavaScript UI libraries like React and Angular.
+本文档包含了如何使用 Halogen 以及相关概念索引。网络上还有其它学习和使用 Halogen 的资源，包括：
 
-[Read the documentation](https://purescript-halogen.github.io/purescript-halogen) to learn how to use Halogen in your own projects.
+- Halogen [API 索引](https://pursuit.purescript.org/packages/purescript-halogen)
+- [实战 Halogen](https://github.com/thomashoneyman/purescript-halogen-realworld) 来自 [Thomas Honeyman](https://github.com/thomashoneyman)
+- [学习 Halogen](https://github.com/JordanMartinez/learn-halogen) 来自 [Jordan Martinez](https://github.com/JordanMartinez)
 
-## Installation
+## 快速入门：Halogen 指南
 
-Install Halogen with [Spago](https://github.com/purescript/spago):
+如果你刚开始学习 Halogen，建议首先阅读[Halogen 指南](./guide)。这本简短的手册通过构建组件来演示和解释 Halogen 相关的概念。
 
-```sh
-spago install halogen
-```
+在阅读本指南之后，你应该能够深入学习其他更高级的资源，例如[概念索引](./concepts-reference) 或者 [实战 Halogen](https://github.com/thomashoneyman/purescript-halogen-realworld).
 
-Or [create a new Halogen app from a template](https://github.com/purescript-halogen/purescript-halogen-template).
+## 深入理解：概念索引
 
-## Documentation
+一旦你熟悉了[Halogen 指南](./guide)中的内容，你或许会对更高级的内容或者 Halogen 的特性为何是如此设计等方面感兴趣。[概念索引](./concepts-reference) 能够帮助你实现对 Halogen 更深一步的理解。
 
-You can find the Halogen documentation [on the documentation site](https://purescript-halogen.github.io/purescript-halogen) or [in the docs folder](https://github.com/purescript-halogen/purescript-halogen/tree/master/docs). Documentation is divided into several categories:
+## 主版本更新日志
 
-* [Halogen Guide](https://github.com/purescript-halogen/purescript-halogen/tree/master/docs/guide)
-* [Concepts Reference](https://github.com/purescript-halogen/purescript-halogen/tree/master/docs/concepts-reference) (Coming soon)
-* [API Reference on Pursuit](https://pursuit.purescript.org/packages/purescript-halogen)
-* [Major Version Changelog](https://github.com/purescript-halogen/purescript-halogen/tree/master/docs/changelog)
-
-We also recommend these community resources for learning how to use Halogen in your applications:
-
-* [Learn Halogen](https://github.com/JordanMartinez/learn-halogen) by [Jordan Martinez](https://github.com/JordanMartinez)
-* [Real World Halogen](https://github.com/thomashoneyman/purescript-halogen-realworld) by [Thomas Honeyman](https://github.com/thomashoneyman)
-
-There are several ways to get help if you get stuck using Halogen:
-
-* [Open an issue](https://github.com/purescript-halogen/purescript-halogen/issues) if you have encountered a bug or problem.
-* [Start a thread on the PureScript Discourse](https://discourse.purescript.org/) or browse the `#halogen` tag if you have general questions about Halogen.
-* Join the `#purescript` and `#purescript-beginners` channels on the [Functional Programming Slack](https://functionalprogramming.slack.com) ([invite link](https://fpchat-invite.herokuapp.com/)) to chat about Halogen with other PureScript users.
-
-## Examples
-
-This repository contains [several self-contained examples](https://github.com/purescript-halogen/purescript-halogen/tree/master/examples), ranging from a basic button to controlling external components.
-
-You may also want to review the [Real World Halogen](https://github.com/thomashoneyman/purescript-halogen-realworld/) example application, which demonstrates routing, state management, authentication, making requests, and other real world examples with commented explanations.
-
-## Contributing
-
-The main purpose of this repository is to continue evolving Halogen, making it faster and easier to use. Halogen is developed in the open on GitHub and we're grateful for community-contributed bugfixes and improvements.
-
-You can take part in improving Halogen by opening or participating in issues, opening pull requests to add new features, documentation, or tests, and by helping other Halogen users on Slack and Discourse.
-
-### License & Credits
-
-Halogen is licensed under the [Apache License 2.0](https://github.com/purescript-halogen/purescript-halogen/blob/master/LICENSE). The Halogen logo was designed by [Matthew Park](https://www.matthewparkart.com/).
+Halogen 主版本发布时都有说明旧版本如何升级的[主版本更新日志](./changelog)。当前有两个主要版本：
+[v6](./changelog/v6.md)
+[v5](./changelog/v5.md)
